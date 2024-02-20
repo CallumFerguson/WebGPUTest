@@ -48,8 +48,37 @@ async function main() {
     code: simpleRedShaderString,
   });
 
+  // const bindGroupLayout = device.createBindGroupLayout({
+  //   entries: [
+  //     {
+  //       binding: 0, // camera uniforms
+  //       visibility: GPUShaderStage.VERTEX,
+  //       buffer: {},
+  //     },
+  //     {
+  //       binding: 1, // model uniform
+  //       visibility: GPUShaderStage.VERTEX,
+  //       buffer: {},
+  //     },
+  //     {
+  //       binding: 2, // baseColor texture
+  //       visibility: GPUShaderStage.FRAGMENT,
+  //       texture: {},
+  //     },
+  //     {
+  //       binding: 3, // baseColor sampler
+  //       visibility: GPUShaderStage.FRAGMENT,
+  //       sampler: {},
+  //     },
+  //   ],
+  // });
+
+  const pipelineLayout = device.createPipelineLayout({
+    bindGroupLayouts: [],
+  });
+
   const pipeline = device.createRenderPipeline({
-    layout: "auto",
+    layout: pipelineLayout,
     vertex: {
       module: shaderModule,
       entrypoint: "vert",
