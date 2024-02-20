@@ -117,18 +117,6 @@ async function main() {
     ],
   };
 
-  let buttonClicked = false;
-  document.querySelector("button").onclick = () => {
-    renderPassDescriptor.colorAttachments[0].clearValue = {
-      r: 0.0,
-      g: 1.0,
-      b: 0.0,
-      a: 1.0,
-    };
-
-    buttonClicked = true;
-  };
-
   if (pipelineDescriptor.multisample.count !== 1) {
     const multisampleTexture = device.createTexture({
       format: presentationFormat,
@@ -157,12 +145,6 @@ async function main() {
 
     const commandEncoder = device.createCommandEncoder();
     const passEncoder = commandEncoder.beginRenderPass(renderPassDescriptor);
-
-    if (buttonClicked) {
-      const data = new Float32Array([0.5, 0, 0, 1, 1, 0, 0, 1, 0, 1, 0, 1]);
-      device.queue.writeBuffer(positionBuffer, 0, data, 0, data.length);
-      buttonClicked = false;
-    }
 
     passEncoder.setPipeline(pipeline);
     passEncoder.setVertexBuffer(0, positionBuffer);
