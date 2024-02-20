@@ -1,4 +1,5 @@
 import simpleRedShaderString from "./shaders/simple_red.wgsl?raw";
+import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 
 function createBuffer(device, data, usage) {
   const buffer = device.createBuffer({
@@ -10,6 +11,25 @@ function createBuffer(device, data, usage) {
   dst.set(data);
   buffer.unmap();
   return buffer;
+}
+
+function gltfFirstMesh(gltf) {
+  let firstMesh;
+  gltf.scene.traverse((node) => {
+    if (node.isMesh && firstMesh === undefined) {
+      firstMesh = node;
+    }
+  });
+  return firstMesh;
+}
+
+function loadBottleModel() {
+  const gltfLoader = new GLTFLoader();
+
+  gltfLoader.load("bottle.glb", (gltf) => {
+    const mesh = gltfFirstMesh(gltf);
+    console.log(mesh.name);
+  });
 }
 
 async function main() {
@@ -33,6 +53,8 @@ async function main() {
     format: presentationFormat,
     alpha: "opaque",
   });
+
+  loadBottleModel();
 
   const positions = new Float32Array([
     -0.5, -0.5, 0, 1, 0.5, -0.5, 0, 1, 0, 0.5, 0, 1,
