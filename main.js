@@ -34,7 +34,9 @@ async function main() {
     alpha: "opaque",
   });
 
-  const positions = new Float32Array([0, 0, 0, 1, 1, 0, 0, 1, 0, 1, 0, 1]);
+  const positions = new Float32Array([
+    -0.5, -0.5, 0, 1, 0.5, -0.5, 0, 1, 0, 0.5, 0, 1,
+  ]);
   const indices = new Uint16Array([0, 1, 2, 0]); // added 0 padding so it is a multiple of 8
 
   const positionBuffer = createBuffer(
@@ -108,7 +110,7 @@ async function main() {
   const renderPassDescriptor = {
     colorAttachments: [
       {
-        clearValue: { r: 0.0, g: 0.0, b: 1.0, a: 1.0 },
+        clearValue: { r: 0.0, g: 0.0, b: 0.0, a: 1.0 },
         loadOp: "clear",
         storeOp: "store",
       },
@@ -157,7 +159,7 @@ async function main() {
     const passEncoder = commandEncoder.beginRenderPass(renderPassDescriptor);
 
     if (buttonClicked) {
-      const data = new Float32Array([0, 0, 0, 1, 1, 0, 0, 1, 0, 1, 0, 1]);
+      const data = new Float32Array([0.5, 0, 0, 1, 1, 0, 0, 1, 0, 1, 0, 1]);
       device.queue.writeBuffer(positionBuffer, 0, data, 0, data.length);
       buttonClicked = false;
     }
