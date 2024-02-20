@@ -77,7 +77,7 @@ async function main() {
     bindGroupLayouts: [],
   });
 
-  const pipeline = device.createRenderPipeline({
+  const pipelineDescriptor = {
     layout: pipelineLayout,
     vertex: {
       module: shaderModule,
@@ -99,7 +99,11 @@ async function main() {
       topology: "triangle-list",
       cullMode: "back",
     },
-  });
+    multisample: {
+      count: 4,
+    },
+  };
+  const pipeline = device.createRenderPipeline(pipelineDescriptor);
 
   const renderPassDescriptor = {
     colorAttachments: [
@@ -123,20 +127,37 @@ async function main() {
     buttonClicked = true;
   };
 
+  if (pipelineDescriptor.multisample.count !== 1) {
+    const multisampleTexture = device.createTexture({
+      format: presentationFormat,
+      usage: GPUTextureUsage.RENDER_ATTACHMENT,
+      size: [canvas.width, canvas.height],
+      sampleCount: pipelineDescriptor.multisample.count,
+    });
+    renderPassDescriptor.colorAttachments[0].view =
+      multisampleTexture.createView();
+  }
+
   let previousTime = 0;
   function render(currentTime) {
     currentTime *= 0.001;
     const deltaTime = currentTime - previousTime;
 
-    renderPassDescriptor.colorAttachments[0].view = context
-      .getCurrentTexture()
-      .createView();
+    if (pipelineDescriptor.multisample.count === 1) {
+      renderPassDescriptor.colorAttachments[0].view = context
+        .getCurrentTexture()
+        .createView();
+    } else {
+      renderPassDescriptor.colorAttachments[0].resolveTarget = context
+        .getCurrentTexture()
+        .createView();
+    }
 
     const commandEncoder = device.createCommandEncoder();
     const passEncoder = commandEncoder.beginRenderPass(renderPassDescriptor);
 
     if (buttonClicked) {
-      const data = new Float32Array([0.5, 0, 0, 1, 1, 0, 0, 1, 0, 1, 0, 1]);
+      const data = new Float32Array([0, 0, 0, 1, 1, 0, 0, 1, 0, 1, 0, 1]);
       device.queue.writeBuffer(positionBuffer, 0, data, 0, data.length);
       buttonClicked = false;
     }
