@@ -1,6 +1,6 @@
 @vertex
 fn vert(@location(0) position: vec3f) -> @builtin(position) vec4f {
-    return vec4(position * 0.3, 1.0);
+    return vec4(position * 0.03, 1.0);
 }
 
 @fragment

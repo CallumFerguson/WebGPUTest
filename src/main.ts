@@ -75,7 +75,7 @@ async function main() {
     alphaMode: "opaque",
   });
 
-  let [positions, indices] = await loadGLTFModel("low_poly_dog.glb");
+  let [positions, indices] = await loadGLTFModel("duck.glb");
 
   // const positions = new Float32Array([
   //   -0.5, -0.5, 0, 1, 0.5, -0.5, 0, 1, 0, 0.5, 0, 1,
@@ -207,7 +207,7 @@ async function main() {
 
     passEncoder.setPipeline(pipeline);
     passEncoder.setVertexBuffer(0, positionBuffer);
-    passEncoder.setIndexBuffer(indicesBuffer, "uint32");
+    passEncoder.setIndexBuffer(indicesBuffer, "uint16");
     passEncoder.drawIndexed(Math.floor(indices.length / 3) * 3);
 
     passEncoder.end();
