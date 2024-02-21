@@ -1,7 +1,12 @@
-import simpleRedShaderString from "./shaders/simple_red.wgsl?raw";
-import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
+import simpleRedShaderString from "../shaders/simple_red.wgsl?raw";
+import { GLTF, GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
+import { Mesh } from "three";
 
-function createBuffer(device, data, usage) {
+function createBuffer(
+  device: GPUDevice,
+  data: any,
+  usage: GPUBufferUsageFlags
+) {
   const buffer = device.createBuffer({
     size: data.byteLength,
     usage,
@@ -13,13 +18,16 @@ function createBuffer(device, data, usage) {
   return buffer;
 }
 
-function gltfFirstMesh(gltf) {
-  let firstMesh;
-  gltf.scene.traverse((node) => {
-    if (node.isMesh && firstMesh === undefined) {
-      firstMesh = node;
+function gltfFirstMesh(gltf: GLTF): Mesh {
+  let firstMesh: Mesh | undefined = undefined;
+  gltf.scene.traverse((child) => {
+    if (child instanceof Mesh && !firstMesh) {
+      firstMesh = child as Mesh;
     }
   });
+  if (!firstMesh) {
+    throw new Error("no mesh");
+  }
   return firstMesh;
 }
 
@@ -28,7 +36,7 @@ function loadBottleModel() {
 
   gltfLoader.load("bottle.glb", (gltf) => {
     const mesh = gltfFirstMesh(gltf);
-    console.log(mesh.name);
+    console.log(mesh.geometry.attributes.position.array.length);
   });
 }
 
@@ -45,13 +53,21 @@ async function main() {
   }
 
   const canvas = document.querySelector("canvas");
+  if (canvas === null) {
+    console.log("no canvas");
+    return;
+  }
   const context = canvas.getContext("webgpu");
+  if (context === null) {
+    console.log("webgpu context was null");
+    return;
+  }
 
-  const presentationFormat = gpu.getPreferredCanvasFormat(adapter);
+  const presentationFormat = gpu.getPreferredCanvasFormat();
   context.configure({
     device,
     format: presentationFormat,
-    alpha: "opaque",
+    alphaMode: "opaque",
   });
 
   loadBottleModel();
@@ -101,11 +117,11 @@ async function main() {
     bindGroupLayouts: [],
   });
 
-  const pipelineDescriptor = {
+  const pipelineDescriptor: GPURenderPipelineDescriptor = {
     layout: pipelineLayout,
     vertex: {
       module: shaderModule,
-      entrypoint: "vert",
+      entryPoint: "vert",
       buffers: [
         // position
         {
@@ -116,7 +132,7 @@ async function main() {
     },
     fragment: {
       module: shaderModule,
-      entrypoint: "frag",
+      entryPoint: "frag",
       targets: [{ format: presentationFormat }],
     },
     primitive: {
@@ -139,34 +155,50 @@ async function main() {
     ],
   };
 
-  if (pipelineDescriptor.multisample.count !== 1) {
+  if (
+    pipelineDescriptor.multisample &&
+    pipelineDescriptor.multisample.count !== 1
+  ) {
     const multisampleTexture = device.createTexture({
       format: presentationFormat,
       usage: GPUTextureUsage.RENDER_ATTACHMENT,
       size: [canvas.width, canvas.height],
       sampleCount: pipelineDescriptor.multisample.count,
     });
+    // @ts-ignore
     renderPassDescriptor.colorAttachments[0].view =
       multisampleTexture.createView();
   }
 
-  let previousTime = 0;
-  function render(currentTime) {
-    currentTime *= 0.001;
-    const deltaTime = currentTime - previousTime;
+  // let previousTime = 0;
+  function render(/* currentTime: number */) {
+    // currentTime *= 0.001;
+    // const deltaTime = currentTime - previousTime;
 
-    if (pipelineDescriptor.multisample.count === 1) {
-      renderPassDescriptor.colorAttachments[0].view = context
+    if (
+      pipelineDescriptor.multisample &&
+      pipelineDescriptor.multisample.count !== 1
+    ) {
+      // @ts-ignore
+      renderPassDescriptor.colorAttachments[0].resolveTarget = context
         .getCurrentTexture()
         .createView();
     } else {
-      renderPassDescriptor.colorAttachments[0].resolveTarget = context
+      // @ts-ignore
+      renderPassDescriptor.colorAttachments[0].view = context
         .getCurrentTexture()
         .createView();
     }
 
+    if (!device) {
+      console.log("device is undefined in render()");
+      return;
+    }
+
     const commandEncoder = device.createCommandEncoder();
-    const passEncoder = commandEncoder.beginRenderPass(renderPassDescriptor);
+    const passEncoder = commandEncoder.beginRenderPass(
+      renderPassDescriptor as GPURenderPassDescriptor
+    );
 
     passEncoder.setPipeline(pipeline);
     passEncoder.setVertexBuffer(0, positionBuffer);
@@ -176,10 +208,10 @@ async function main() {
     passEncoder.end();
     device.queue.submit([commandEncoder.finish()]);
 
-    previousTime = currentTime;
+    // previousTime = currentTime;
     requestAnimationFrame(render);
   }
   requestAnimationFrame(render);
 }
 
-main();
+main().then();
