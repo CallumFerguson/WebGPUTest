@@ -31,12 +31,17 @@ function gltfFirstMesh(gltf: GLTF): Mesh {
   return firstMesh;
 }
 
-function loadBottleModel() {
+function loadGLTFModel(fileName: string): Promise<any> {
   const gltfLoader = new GLTFLoader();
 
-  gltfLoader.load("bottle.glb", (gltf) => {
-    const mesh = gltfFirstMesh(gltf);
-    console.log(mesh.geometry.attributes.position.array.length);
+  return new Promise((resolve) => {
+    gltfLoader.load(fileName, (gltf) => {
+      const mesh = gltfFirstMesh(gltf);
+      resolve([
+        mesh.geometry.attributes.position.array,
+        mesh.geometry.index?.array,
+      ]);
+    });
   });
 }
 
@@ -70,12 +75,12 @@ async function main() {
     alphaMode: "opaque",
   });
 
-  loadBottleModel();
+  let [positions, indices] = await loadGLTFModel("low_poly_dog.glb");
 
-  const positions = new Float32Array([
-    -0.5, -0.5, 0, 1, 0.5, -0.5, 0, 1, 0, 0.5, 0, 1,
-  ]);
-  const indices = new Uint16Array([0, 1, 2, 0]); // added 0 padding so it is a multiple of 8
+  // const positions = new Float32Array([
+  //   -0.5, -0.5, 0, 1, 0.5, -0.5, 0, 1, 0, 0.5, 0, 1,
+  // ]);
+  // const indices = new Uint16Array([0, 1, 2, 0]); // added 0 padding so it is a multiple of 8
 
   const positionBuffer = createBuffer(
     device,
@@ -125,8 +130,8 @@ async function main() {
       buffers: [
         // position
         {
-          arrayStride: 4 * 4,
-          attributes: [{ shaderLocation: 0, offset: 0, format: "float32x4" }],
+          arrayStride: 3 * 4,
+          attributes: [{ shaderLocation: 0, offset: 0, format: "float32x3" }],
         },
       ],
     },
@@ -202,7 +207,7 @@ async function main() {
 
     passEncoder.setPipeline(pipeline);
     passEncoder.setVertexBuffer(0, positionBuffer);
-    passEncoder.setIndexBuffer(indicesBuffer, "uint16");
+    passEncoder.setIndexBuffer(indicesBuffer, "uint32");
     passEncoder.drawIndexed(Math.floor(indices.length / 3) * 3);
 
     passEncoder.end();
