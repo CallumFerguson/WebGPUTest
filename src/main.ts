@@ -16,9 +16,11 @@ function createBuffer(
   return buffer;
 }
 
-async function loadModel(
-  fileName: string
-): Promise<{ vertices: Float32Array; indices: Uint32Array }> {
+async function loadModel(fileName: string): Promise<{
+  vertices: Float32Array;
+  normals: Float32Array;
+  indices: Uint32Array;
+}> {
   // @ts-ignore
   const ajs: any = await assimpjs();
 
@@ -57,9 +59,10 @@ async function loadModel(
         let mesh = resultJson.meshes[0];
 
         const vertices = Float32Array.from(mesh.vertices);
+        const normals = Float32Array.from(mesh.normals);
         const indices = Uint32Array.from(mesh.faces.flat());
 
-        resolve({ vertices, indices });
+        resolve({ vertices, normals, indices });
       });
   });
 }
@@ -94,7 +97,7 @@ async function main() {
     alphaMode: "opaque",
   });
 
-  let { vertices, indices } = await loadModel("duck.glb");
+  let { vertices, normals, indices } = await loadModel("duck.glb");
 
   // const vertices = new Float32Array([-0.5, -0.5, 0, 0.5, -0.5, 0, 0, 0.5, 0]);
   // const indices = new Uint32Array([0, 1, 2]);
@@ -102,6 +105,11 @@ async function main() {
   const vertexBuffer = createBuffer(
     device,
     vertices,
+    GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST
+  );
+  const normalBuffer = createBuffer(
+    device,
+    normals,
     GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST
   );
   const indexBuffer = createBuffer(device, indices, GPUBufferUsage.INDEX);
@@ -149,6 +157,11 @@ async function main() {
         {
           arrayStride: 3 * 4,
           attributes: [{ shaderLocation: 0, offset: 0, format: "float32x3" }],
+        },
+        // normal
+        {
+          arrayStride: 3 * 4,
+          attributes: [{ shaderLocation: 1, offset: 0, format: "float32x3" }],
         },
       ],
     },
@@ -224,6 +237,7 @@ async function main() {
 
     passEncoder.setPipeline(pipeline);
     passEncoder.setVertexBuffer(0, vertexBuffer);
+    passEncoder.setVertexBuffer(1, normalBuffer);
     passEncoder.setIndexBuffer(indexBuffer, "uint32");
     passEncoder.drawIndexed(Math.floor(indices.length / 3) * 3);
 
