@@ -1,7 +1,4 @@
 import simpleRedShaderString from "../shaders/simple_red.wgsl?raw";
-import { GLTF, GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
-import { Mesh } from "three";
-import duckString from "../public/duck.glb?raw";
 
 function createBuffer(
   device: GPUDevice,
@@ -19,66 +16,55 @@ function createBuffer(
   return buffer;
 }
 
-function gltfFirstMesh(gltf: GLTF): Mesh {
-  let firstMesh: Mesh | undefined = undefined;
-  gltf.scene.traverse((child) => {
-    if (child instanceof Mesh && !firstMesh) {
-      firstMesh = child as Mesh;
-    }
-  });
-  if (!firstMesh) {
-    throw new Error("no mesh");
-  }
-  return firstMesh;
-}
-
-function loadGLTFModel(fileName: string): Promise<any> {
-  const gltfLoader = new GLTFLoader();
-
-  return new Promise((resolve) => {
-    gltfLoader.load(fileName, (gltf) => {
-      const mesh = gltfFirstMesh(gltf);
-      resolve([
-        mesh.geometry.attributes.position.array,
-        mesh.geometry.index?.array,
-      ]);
-    });
-  });
-}
-
-async function test() {
+async function loadModel(
+  fileName: string
+): Promise<{ vertices: Float32Array; indices: Uint32Array }> {
   // @ts-ignore
-  // const ajs: any = await assimpjs();
+  const ajs: any = await assimpjs();
 
-  const test = assimpjs();
+  // fetch the files to import
+  let files = [fileName];
 
-  // create new file list object
-  // let fileList = new ajs.FileList();
+  return new Promise((resolve, reject) => {
+    Promise.all(files.map((file) => fetch(file)))
+      .then((responses) => {
+        return Promise.all(responses.map((res) => res.arrayBuffer()));
+      })
+      .then((arrayBuffers) => {
+        // create new file list object, and add the files
+        let fileList = new ajs.FileList();
+        for (let i = 0; i < files.length; i++) {
+          fileList.AddFile(files[i], new Uint8Array(arrayBuffers[i]));
+        }
 
-  // // add model files
-  // fileList.AddFile("duck.glb", duckString);
-  //
-  // // convert file list to assimp json
-  // let result = ajs.ConvertFileList(fileList, "assjson");
-  //
-  // // check if the conversion succeeded
-  // if (!result.IsSuccess() || result.FileCount() == 0) {
-  //   console.log(result.GetErrorCode());
-  //   return;
-  // }
-  //
-  // // get the result file, and convert to string
-  // let resultFile = result.GetFile(0);
-  // let jsonContent = new TextDecoder().decode(resultFile.GetContent());
-  //
-  // // parse the result json
-  // let resultJson = JSON.parse(jsonContent);
-  // console.log(resultJson);
+        // convert file list to assimp json
+        let result = ajs.ConvertFileList(fileList, "assjson");
+
+        // check if the conversion succeeded
+        if (!result.IsSuccess() || result.FileCount() == 0) {
+          console.log(result.GetErrorCode());
+          reject(result.GetErrorCode());
+          return;
+        }
+
+        // get the result file, and convert to string
+        let resultFile = result.GetFile(0);
+        let jsonContent = new TextDecoder().decode(resultFile.GetContent());
+
+        // parse the result json
+        let resultJson = JSON.parse(jsonContent);
+
+        let mesh = resultJson.meshes[0];
+
+        const vertices = Float32Array.from(mesh.vertices);
+        const indices = Uint32Array.from(mesh.faces.flat());
+
+        resolve({ vertices, indices });
+      });
+  });
 }
 
 async function main() {
-  test();
-
   const gpu = navigator.gpu;
   const adapter = await gpu?.requestAdapter({
     powerPreference: "high-performance",
@@ -108,19 +94,19 @@ async function main() {
     alphaMode: "opaque",
   });
 
-  let [positions, indices] = await loadGLTFModel("duck.glb");
+  let { vertices, indices } = await loadModel("duck.glb");
 
-  // const positions = new Float32Array([
+  // const vertices = new Float32Array([
   //   -0.5, -0.5, 0, 1, 0.5, -0.5, 0, 1, 0, 0.5, 0, 1,
   // ]);
   // const indices = new Uint16Array([0, 1, 2, 0]); // added 0 padding so it is a multiple of 8
 
-  const positionBuffer = createBuffer(
+  const vertexBuffer = createBuffer(
     device,
-    positions,
+    vertices,
     GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST
   );
-  const indicesBuffer = createBuffer(device, indices, GPUBufferUsage.INDEX);
+  const indexBuffer = createBuffer(device, indices, GPUBufferUsage.INDEX);
 
   const shaderModule = device.createShaderModule({
     code: simpleRedShaderString,
@@ -161,7 +147,7 @@ async function main() {
       module: shaderModule,
       entryPoint: "vert",
       buffers: [
-        // position
+        // vertex
         {
           arrayStride: 3 * 4,
           attributes: [{ shaderLocation: 0, offset: 0, format: "float32x3" }],
@@ -239,8 +225,8 @@ async function main() {
     );
 
     passEncoder.setPipeline(pipeline);
-    passEncoder.setVertexBuffer(0, positionBuffer);
-    passEncoder.setIndexBuffer(indicesBuffer, "uint16");
+    passEncoder.setVertexBuffer(0, vertexBuffer);
+    passEncoder.setIndexBuffer(indexBuffer, "uint32");
     passEncoder.drawIndexed(Math.floor(indices.length / 3) * 3);
 
     passEncoder.end();
@@ -252,4 +238,6 @@ async function main() {
   requestAnimationFrame(render);
 }
 
-main().then();
+window.onload = () => {
+  main().then();
+};
