@@ -18,5 +18,6 @@ fn vert(i: VertexInput) -> VertexOutput {
 
 @fragment
 fn frag(i: VertexOutput) -> @location(0) vec4f {
-    return vec4f(i.normal, 1.0);
+    var light = dot(i.normal, normalize(vec3(-0.5, 0.5, 0.5)));
+    return vec4f(light, light, light, 1.0);
 }
