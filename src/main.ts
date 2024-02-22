@@ -96,10 +96,8 @@ async function main() {
 
   let { vertices, indices } = await loadModel("duck.glb");
 
-  // const vertices = new Float32Array([
-  //   -0.5, -0.5, 0, 1, 0.5, -0.5, 0, 1, 0, 0.5, 0, 1,
-  // ]);
-  // const indices = new Uint16Array([0, 1, 2, 0]); // added 0 padding so it is a multiple of 8
+  // const vertices = new Float32Array([-0.5, -0.5, 0, 0.5, -0.5, 0, 0, 0.5, 0]);
+  // const indices = new Uint32Array([0, 1, 2]);
 
   const vertexBuffer = createBuffer(
     device,
