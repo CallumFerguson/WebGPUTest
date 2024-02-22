@@ -1,6 +1,7 @@
 import simpleRedShaderString from "../shaders/simple_red.wgsl?raw";
 import { GLTF, GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import { Mesh } from "three";
+import duckString from "../public/duck.glb?raw";
 
 function createBuffer(
   device: GPUDevice,
@@ -45,7 +46,39 @@ function loadGLTFModel(fileName: string): Promise<any> {
   });
 }
 
+async function test() {
+  // @ts-ignore
+  // const ajs: any = await assimpjs();
+
+  const test = assimpjs();
+
+  // create new file list object
+  // let fileList = new ajs.FileList();
+
+  // // add model files
+  // fileList.AddFile("duck.glb", duckString);
+  //
+  // // convert file list to assimp json
+  // let result = ajs.ConvertFileList(fileList, "assjson");
+  //
+  // // check if the conversion succeeded
+  // if (!result.IsSuccess() || result.FileCount() == 0) {
+  //   console.log(result.GetErrorCode());
+  //   return;
+  // }
+  //
+  // // get the result file, and convert to string
+  // let resultFile = result.GetFile(0);
+  // let jsonContent = new TextDecoder().decode(resultFile.GetContent());
+  //
+  // // parse the result json
+  // let resultJson = JSON.parse(jsonContent);
+  // console.log(resultJson);
+}
+
 async function main() {
+  test();
+
   const gpu = navigator.gpu;
   const adapter = await gpu?.requestAdapter({
     powerPreference: "high-performance",
