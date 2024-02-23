@@ -196,12 +196,29 @@ async function main() {
     multisample: {
       count: 4,
     },
+    depthStencil: {
+      depthWriteEnabled: true,
+      depthCompare: "less",
+      format: "depth24plus",
+    },
   };
   const pipeline = device.createRenderPipeline(pipelineDescriptor);
 
   const bindGroup = device.createBindGroup({
     layout: bindGroupLayout,
     entries: [{ binding: 0, resource: { buffer: uniformBuffer } }],
+  });
+
+  const depthTexture = device.createTexture({
+    size: [
+      context.getCurrentTexture().width,
+      context.getCurrentTexture().height,
+    ],
+    format: "depth24plus",
+    sampleCount: pipelineDescriptor.multisample
+      ? pipelineDescriptor.multisample.count
+      : 1,
+    usage: GPUTextureUsage.RENDER_ATTACHMENT,
   });
 
   const renderPassDescriptor = {
@@ -212,6 +229,12 @@ async function main() {
         storeOp: "store",
       },
     ],
+    depthStencilAttachment: {
+      view: depthTexture.createView(),
+      depthClearValue: 1.0,
+      depthLoadOp: "clear",
+      depthStoreOp: "store",
+    },
   };
 
   if (
