@@ -1,5 +1,6 @@
 import simpleRedShaderString from "../shaders/simple_red.wgsl?raw";
 import { makeShaderDataDefinitions, makeStructuredView } from "webgpu-utils";
+import { mat4, vec3, quat } from "gl-matrix";
 
 function createBuffer(
   device: GPUDevice,
@@ -114,9 +115,32 @@ async function main() {
   const indexBuffer = createBuffer(device, indices, GPUBufferUsage.INDEX);
 
   const defs = makeShaderDataDefinitions(simpleRedShaderString);
-  const uniformDataValues = makeStructuredView(defs.uniforms.uniformData);
+  const uniformDataValues = makeStructuredView(defs.uniforms.u);
+
+  let model = mat4.create();
+  let rotation = quat.create();
+  quat.setAxisAngle(rotation, vec3.fromValues(0, 1, 0), Math.PI / 4);
+  let position = vec3.fromValues(0, -0.25, -1);
+  let size = 0.05;
+  let scale = vec3.fromValues(size, size, size);
+  mat4.fromRotationTranslationScale(model, rotation, position, scale);
+
+  let view = mat4.create();
+  let cameraRotation = quat.create();
+  let cameraPosition = vec3.fromValues(0.5, 0, 0);
+  mat4.fromRotationTranslation(view, cameraRotation, cameraPosition);
+  mat4.invert(view, view);
+
+  let projection = mat4.create();
+  mat4.perspectiveZO(projection, 90, canvas.width / canvas.height, 0.01, 100);
+
+  let mvp = mat4.create();
+  mat4.mul(mvp, view, model);
+  mat4.mul(mvp, projection, mvp);
+
   uniformDataValues.set({
     color: [1, 0.25, 0],
+    mvp: mvp,
   });
   const uniformBuffer = createBuffer(
     device,
@@ -132,7 +156,7 @@ async function main() {
     entries: [
       {
         binding: 0,
-        visibility: GPUShaderStage.FRAGMENT,
+        visibility: GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT,
         buffer: {},
       },
       // {
