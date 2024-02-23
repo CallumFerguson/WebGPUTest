@@ -159,26 +159,6 @@ async function main() {
         visibility: GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT,
         buffer: {},
       },
-      // {
-      //   binding: 0, // camera uniforms
-      //   visibility: GPUShaderStage.VERTEX,
-      //   buffer: {},
-      // },
-      // {
-      //   binding: 1, // model uniform
-      //   visibility: GPUShaderStage.VERTEX,
-      //   buffer: {},
-      // },
-      // {
-      //   binding: 2, // baseColor texture
-      //   visibility: GPUShaderStage.FRAGMENT,
-      //   texture: {},
-      // },
-      // {
-      //   binding: 3, // baseColor sampler
-      //   visibility: GPUShaderStage.FRAGMENT,
-      //   sampler: {},
-      // },
     ],
   });
 
