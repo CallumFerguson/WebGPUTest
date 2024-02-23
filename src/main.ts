@@ -1,8 +1,9 @@
 import simpleRedShaderString from "../shaders/simple_red.wgsl?raw";
+import { makeShaderDataDefinitions, makeStructuredView } from "webgpu-utils";
 
 function createBuffer(
   device: GPUDevice,
-  data: any,
+  data: any, // TypedArray or ArrayBuffer
   usage: GPUBufferUsageFlags
 ) {
   const buffer = device.createBuffer({
@@ -10,8 +11,17 @@ function createBuffer(
     usage,
     mappedAtCreation: true,
   });
-  const dst = new data.constructor(buffer.getMappedRange());
-  dst.set(data);
+
+  const mappedRange = buffer.getMappedRange();
+
+  if (data instanceof ArrayBuffer) {
+    const view = new Uint8Array(mappedRange);
+    view.set(new Uint8Array(data));
+  } else {
+    const dst = new data.constructor(mappedRange);
+    dst.set(data);
+  }
+
   buffer.unmap();
   return buffer;
 }
@@ -99,52 +109,57 @@ async function main() {
 
   let { vertices, normals, indices } = await loadModel("duck.glb");
 
-  // const vertices = new Float32Array([-0.5, -0.5, 0, 0.5, -0.5, 0, 0, 0.5, 0]);
-  // const indices = new Uint32Array([0, 1, 2]);
-
-  const vertexBuffer = createBuffer(
-    device,
-    vertices,
-    GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST
-  );
-  const normalBuffer = createBuffer(
-    device,
-    normals,
-    GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST
-  );
+  const vertexBuffer = createBuffer(device, vertices, GPUBufferUsage.VERTEX);
+  const normalBuffer = createBuffer(device, normals, GPUBufferUsage.VERTEX);
   const indexBuffer = createBuffer(device, indices, GPUBufferUsage.INDEX);
+
+  const defs = makeShaderDataDefinitions(simpleRedShaderString);
+  const uniformDataValues = makeStructuredView(defs.uniforms.uniformData);
+  uniformDataValues.set({
+    color: [1, 0.25, 0],
+  });
+  const uniformBuffer = createBuffer(
+    device,
+    uniformDataValues.arrayBuffer,
+    GPUBufferUsage.UNIFORM
+  );
 
   const shaderModule = device.createShaderModule({
     code: simpleRedShaderString,
   });
 
-  // const bindGroupLayout = device.createBindGroupLayout({
-  //   entries: [
-  //     {
-  //       binding: 0, // camera uniforms
-  //       visibility: GPUShaderStage.VERTEX,
-  //       buffer: {},
-  //     },
-  //     {
-  //       binding: 1, // model uniform
-  //       visibility: GPUShaderStage.VERTEX,
-  //       buffer: {},
-  //     },
-  //     {
-  //       binding: 2, // baseColor texture
-  //       visibility: GPUShaderStage.FRAGMENT,
-  //       texture: {},
-  //     },
-  //     {
-  //       binding: 3, // baseColor sampler
-  //       visibility: GPUShaderStage.FRAGMENT,
-  //       sampler: {},
-  //     },
-  //   ],
-  // });
+  const bindGroupLayout = device.createBindGroupLayout({
+    entries: [
+      {
+        binding: 0,
+        visibility: GPUShaderStage.FRAGMENT,
+        buffer: {},
+      },
+      // {
+      //   binding: 0, // camera uniforms
+      //   visibility: GPUShaderStage.VERTEX,
+      //   buffer: {},
+      // },
+      // {
+      //   binding: 1, // model uniform
+      //   visibility: GPUShaderStage.VERTEX,
+      //   buffer: {},
+      // },
+      // {
+      //   binding: 2, // baseColor texture
+      //   visibility: GPUShaderStage.FRAGMENT,
+      //   texture: {},
+      // },
+      // {
+      //   binding: 3, // baseColor sampler
+      //   visibility: GPUShaderStage.FRAGMENT,
+      //   sampler: {},
+      // },
+    ],
+  });
 
   const pipelineLayout = device.createPipelineLayout({
-    bindGroupLayouts: [],
+    bindGroupLayouts: [bindGroupLayout],
   });
 
   const pipelineDescriptor: GPURenderPipelineDescriptor = {
@@ -179,6 +194,11 @@ async function main() {
     },
   };
   const pipeline = device.createRenderPipeline(pipelineDescriptor);
+
+  const bindGroup = device.createBindGroup({
+    layout: bindGroupLayout,
+    entries: [{ binding: 0, resource: { buffer: uniformBuffer } }],
+  });
 
   const renderPassDescriptor = {
     colorAttachments: [
@@ -236,6 +256,7 @@ async function main() {
     );
 
     passEncoder.setPipeline(pipeline);
+    passEncoder.setBindGroup(0, bindGroup);
     passEncoder.setVertexBuffer(0, vertexBuffer);
     passEncoder.setVertexBuffer(1, normalBuffer);
     passEncoder.setIndexBuffer(indexBuffer, "uint32");
