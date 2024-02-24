@@ -1,6 +1,7 @@
 struct UniformData {
     color: vec3f,
     mvp: mat4x4f,
+    model: mat4x4f,
 }
 
 @group(0) @binding(0) var<uniform> u: UniformData;
@@ -19,13 +20,13 @@ struct VertexOutput {
 fn vert(i: VertexInput) -> VertexOutput {
     var o: VertexOutput;
     o.position = u.mvp * vec4(i.position.xyz, 1.0);
-    o.normal = i.normal;
+    o.normal = (u.model * vec4(i.normal, 0.0)).xyz;
     return o;
 }
 
 @fragment
 fn frag(i: VertexOutput) -> @location(0) vec4f {
-    var light = min(max(dot(i.normal, normalize(vec3(-0.5, 0.5, 0.5))), 0) + 0.15, 1);
+    var light = min(max(dot(normalize(i.normal), normalize(vec3(-0.5, 0.5, 0.5))), 0) + 0.15, 1);
     var lightColor = vec3(light, light, light);
     return vec4f(lightColor * u.color, 1.0);
 }

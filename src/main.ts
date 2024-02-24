@@ -118,35 +118,29 @@ async function main() {
   const uniformDataValues = makeStructuredView(defs.uniforms.u);
 
   let model = mat4.create();
+
   let rotation = quat.create();
   quat.setAxisAngle(rotation, vec3.fromValues(0, 1, 0), Math.PI / 4);
-  let position = vec3.fromValues(0, -0.25, -1);
-  let size = 0.05;
-  let scale = vec3.fromValues(size, size, size);
-  mat4.fromRotationTranslationScale(model, rotation, position, scale);
+  let position = vec3.fromValues(0, 0, -1);
+  let scale = vec3.fromValues(0.05, 0.05, 0.05);
 
   let view = mat4.create();
   let cameraRotation = quat.create();
-  let cameraPosition = vec3.fromValues(0.5, 0, 0);
+  let cameraPosition = vec3.fromValues(0, 0, 0);
   mat4.fromRotationTranslation(view, cameraRotation, cameraPosition);
   mat4.invert(view, view);
 
   let projection = mat4.create();
   mat4.perspectiveZO(projection, 90, canvas.width / canvas.height, 0.01, 100);
 
-  let mvp = mat4.create();
-  mat4.mul(mvp, view, model);
-  mat4.mul(mvp, projection, mvp);
-
   uniformDataValues.set({
     color: [1, 0.25, 0],
-    mvp: mvp,
   });
-  const uniformBuffer = createBuffer(
-    device,
-    uniformDataValues.arrayBuffer,
-    GPUBufferUsage.UNIFORM
-  );
+
+  const uniformBuffer = device.createBuffer({
+    size: uniformDataValues.arrayBuffer.byteLength,
+    usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
+  });
 
   const shaderModule = device.createShaderModule({
     code: simpleRedShaderString,
@@ -252,10 +246,10 @@ async function main() {
       multisampleTexture.createView();
   }
 
-  // let previousTime = 0;
-  function render(/* currentTime: number */) {
-    // currentTime *= 0.001;
-    // const deltaTime = currentTime - previousTime;
+  let previousTime = 0;
+  function render(currentTime: number) {
+    currentTime *= 0.001;
+    const deltaTime = currentTime - previousTime;
 
     if (
       pipelineDescriptor.multisample &&
@@ -277,6 +271,20 @@ async function main() {
       return;
     }
 
+    quat.rotateY(rotation, rotation, (Math.PI * deltaTime) / 7.5);
+    position[1] = Math.sin(currentTime * 1.5) / 2 - 0.4;
+    mat4.fromRotationTranslationScale(model, rotation, position, scale);
+
+    let mvp = mat4.create();
+    mat4.mul(mvp, view, model);
+    mat4.mul(mvp, projection, mvp);
+
+    uniformDataValues.set({
+      mvp: mvp,
+      model: model,
+    });
+    device.queue.writeBuffer(uniformBuffer, 0, uniformDataValues.arrayBuffer);
+
     const commandEncoder = device.createCommandEncoder();
     const passEncoder = commandEncoder.beginRenderPass(
       renderPassDescriptor as GPURenderPassDescriptor
@@ -292,7 +300,7 @@ async function main() {
     passEncoder.end();
     device.queue.submit([commandEncoder.finish()]);
 
-    // previousTime = currentTime;
+    previousTime = currentTime;
     requestAnimationFrame(render);
   }
   requestAnimationFrame(render);
