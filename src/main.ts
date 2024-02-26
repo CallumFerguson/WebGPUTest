@@ -30,6 +30,7 @@ function createBuffer(
 async function loadModel(fileName: string): Promise<{
   vertices: Float32Array;
   normals: Float32Array;
+  uvs: Float32Array;
   indices: Uint32Array;
 }> {
   // @ts-ignore
@@ -71,9 +72,17 @@ async function loadModel(fileName: string): Promise<{
 
         const vertices = Float32Array.from(mesh.vertices);
         const normals = Float32Array.from(mesh.normals);
+        if (mesh.texturecoords.length < 1) {
+          console.log("texture missing texurecoords");
+        }
+        if (mesh.texturecoords.length > 1) {
+          console.log("texture has multiple sets of texturecoords");
+          console.log(mesh.texturecoords);
+        }
+        const uvs = Float32Array.from(mesh.texturecoords[0]);
         const indices = Uint32Array.from(mesh.faces.flat());
 
-        resolve({ vertices, normals, indices });
+        resolve({ vertices, normals, uvs, indices });
       });
   });
 }
@@ -119,10 +128,11 @@ async function main() {
     alphaMode: "opaque",
   });
 
-  let { vertices, normals, indices } = await loadModel("duck.glb");
+  let { vertices, normals, uvs, indices } = await loadModel("duck.glb");
 
   const vertexBuffer = createBuffer(device, vertices, GPUBufferUsage.VERTEX);
   const normalBuffer = createBuffer(device, normals, GPUBufferUsage.VERTEX);
+  const uvBuffer = createBuffer(device, uvs, GPUBufferUsage.VERTEX);
   const indexBuffer = createBuffer(device, indices, GPUBufferUsage.INDEX);
 
   const defs = makeShaderDataDefinitions(simpleRedShaderString);
@@ -189,6 +199,11 @@ async function main() {
         {
           arrayStride: 3 * 4,
           attributes: [{ shaderLocation: 1, offset: 0, format: "float32x3" }],
+        },
+        // uv
+        {
+          arrayStride: 2 * 4,
+          attributes: [{ shaderLocation: 2, offset: 0, format: "float32x2" }],
         },
       ],
     },
@@ -349,6 +364,7 @@ async function main() {
     passEncoder.setBindGroup(0, bindGroup);
     passEncoder.setVertexBuffer(0, vertexBuffer);
     passEncoder.setVertexBuffer(1, normalBuffer);
+    passEncoder.setVertexBuffer(2, uvBuffer);
     passEncoder.setIndexBuffer(indexBuffer, "uint32");
     passEncoder.drawIndexed(Math.floor(indices.length / 3) * 3);
 
