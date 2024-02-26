@@ -80,26 +80,37 @@ async function loadModel(fileName: string): Promise<{
 
 async function main() {
   const gpu = navigator.gpu;
+  if (!gpu) {
+    console.log("browser does not support WebGPU");
+    alert("browser does not support WebGPU");
+    return;
+  }
   const adapter = await gpu?.requestAdapter({
     powerPreference: "high-performance",
   });
-  const device = await adapter?.requestDevice();
-  if (!device || !gpu) {
+  if (!adapter) {
+    console.log("browser does not support WebGPU");
+    alert("browser does not support WebGPU");
+    return;
+  }
+  const device = await adapter.requestDevice();
+  if (!device) {
     console.log("browser does not support WebGPU");
     alert("browser does not support WebGPU");
     return;
   }
 
-  const canvas = document.querySelector("canvas");
+  const canvas = document.querySelector("canvas") as HTMLCanvasElement;
   if (canvas === null) {
     console.log("no canvas");
     return;
   }
-  const context = canvas.getContext("webgpu");
+  const context = canvas.getContext("webgpu") as GPUCanvasContext;
   if (context === null) {
     console.log("webgpu context was null");
     return;
   }
+  resizeCanvasIfNeeded();
 
   const presentationFormat = gpu.getPreferredCanvasFormat();
   context.configure({
@@ -131,7 +142,10 @@ async function main() {
   mat4.invert(view, view);
 
   let projection = mat4.create();
-  mat4.perspectiveZO(projection, 90, canvas.width / canvas.height, 0.01, 100);
+  function calculateProjection() {
+    mat4.perspectiveZO(projection, 90, canvas.width / canvas.height, 0.01, 100);
+  }
+  calculateProjection();
 
   uniformDataValues.set({
     color: [1, 0.25, 0],
@@ -203,19 +217,7 @@ async function main() {
     entries: [{ binding: 0, resource: { buffer: uniformBuffer } }],
   });
 
-  const depthTexture = device.createTexture({
-    size: [
-      context.getCurrentTexture().width,
-      context.getCurrentTexture().height,
-    ],
-    format: "depth24plus",
-    sampleCount: pipelineDescriptor.multisample
-      ? pipelineDescriptor.multisample.count
-      : 1,
-    usage: GPUTextureUsage.RENDER_ATTACHMENT,
-  });
-
-  const renderPassDescriptor = {
+  const renderPassDescriptor: unknown = {
     colorAttachments: [
       {
         clearValue: { r: 0.0, g: 0.0, b: 0.0, a: 1.0 },
@@ -224,32 +226,90 @@ async function main() {
       },
     ],
     depthStencilAttachment: {
-      view: depthTexture.createView(),
       depthClearValue: 1.0,
       depthLoadOp: "clear",
       depthStoreOp: "store",
     },
   };
 
-  if (
-    pipelineDescriptor.multisample &&
-    pipelineDescriptor.multisample.count !== 1
-  ) {
-    const multisampleTexture = device.createTexture({
-      format: presentationFormat,
-      usage: GPUTextureUsage.RENDER_ATTACHMENT,
+  let depthTexture: GPUTexture | undefined = undefined;
+  setUpNewDepthTexture();
+
+  function setUpNewDepthTexture() {
+    if (depthTexture) {
+      depthTexture.destroy();
+    }
+    depthTexture = device.createTexture({
       size: [canvas.width, canvas.height],
-      sampleCount: pipelineDescriptor.multisample.count,
+      format: "depth24plus",
+      sampleCount: pipelineDescriptor.multisample
+        ? pipelineDescriptor.multisample.count
+        : 1,
+      usage: GPUTextureUsage.RENDER_ATTACHMENT,
     });
     // @ts-ignore
-    renderPassDescriptor.colorAttachments[0].view =
-      multisampleTexture.createView();
+    renderPassDescriptor.depthStencilAttachment.view =
+      depthTexture.createView();
+  }
+
+  let multisampleTexture: GPUTexture | undefined = undefined;
+  setUpNewMultisampleTexture();
+
+  function setUpNewMultisampleTexture() {
+    if (multisampleTexture) {
+      multisampleTexture.destroy();
+    }
+    if (
+      pipelineDescriptor.multisample &&
+      pipelineDescriptor.multisample.count !== 1
+    ) {
+      multisampleTexture = device.createTexture({
+        format: presentationFormat,
+        usage: GPUTextureUsage.RENDER_ATTACHMENT,
+        size: [canvas.width, canvas.height],
+        sampleCount: pipelineDescriptor.multisample.count,
+      });
+      // @ts-ignore
+      renderPassDescriptor.colorAttachments[0].view =
+        multisampleTexture.createView();
+    }
+  }
+
+  function resizeCanvasIfNeeded(): boolean {
+    const width = Math.max(
+      1,
+      Math.min(device.limits.maxTextureDimension2D, canvas.clientWidth)
+    );
+    const height = Math.max(
+      1,
+      Math.min(device.limits.maxTextureDimension2D, canvas.clientHeight)
+    );
+
+    const needResize = width !== canvas.width || height !== canvas.height;
+    if (needResize) {
+      canvas.width = width;
+      canvas.height = height;
+    }
+    return needResize;
+  }
+
+  function handleCanvasResize() {
+    const resized = resizeCanvasIfNeeded();
+    if (!resized) {
+      return;
+    }
+
+    calculateProjection();
+    setUpNewMultisampleTexture();
+    setUpNewDepthTexture();
   }
 
   let previousTime = 0;
   function render(currentTime: number) {
     currentTime *= 0.001;
     const deltaTime = currentTime - previousTime;
+
+    handleCanvasResize();
 
     if (
       pipelineDescriptor.multisample &&
@@ -264,11 +324,6 @@ async function main() {
       renderPassDescriptor.colorAttachments[0].view = context
         .getCurrentTexture()
         .createView();
-    }
-
-    if (!device) {
-      console.log("device is undefined in render()");
-      return;
     }
 
     quat.rotateY(rotation, rotation, (Math.PI * deltaTime) / 7.5);
