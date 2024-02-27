@@ -33,7 +33,6 @@ fn vert(i: VertexInput) -> VertexOutput {
 fn frag(i: VertexOutput) -> @location(0) vec4f {
     var light = min(max(dot(normalize(i.normal), normalize(vec3(-0.5, 0.5, 0.5))), 0) + 0.15, 1);
     var lightColor = vec3(light, light, light);
-//    return vec4f(lightColor * u.color, 1.0);
-    return vec4f(i.uv, 0, 1);
-//    return textureSample(texture, textureSampler, i.uv);
+    var diffuseColor = textureSample(texture, textureSampler, i.uv).rgb;
+    return vec4(diffuseColor * lightColor, 1);
 }

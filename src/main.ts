@@ -150,7 +150,11 @@ async function main() {
     mips: true,
     flipY: true,
   });
-  console.log(texture);
+
+  const sampler = device.createSampler({
+    magFilter: "linear",
+    minFilter: "linear",
+  });
 
   const defs = makeShaderDataDefinitions(simpleRedShaderString);
   const uniformDataValues = makeStructuredView(defs.uniforms.u);
@@ -193,6 +197,16 @@ async function main() {
         binding: 0,
         visibility: GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT,
         buffer: {},
+      },
+      {
+        binding: 1,
+        visibility: GPUShaderStage.FRAGMENT,
+        sampler: {},
+      },
+      {
+        binding: 2,
+        visibility: GPUShaderStage.FRAGMENT,
+        texture: {},
       },
     ],
   });
@@ -246,7 +260,11 @@ async function main() {
 
   const bindGroup = device.createBindGroup({
     layout: bindGroupLayout,
-    entries: [{ binding: 0, resource: { buffer: uniformBuffer } }],
+    entries: [
+      { binding: 0, resource: { buffer: uniformBuffer } },
+      { binding: 1, resource: sampler },
+      { binding: 2, resource: texture.createView() },
+    ],
   });
 
   const renderPassDescriptor: unknown = {
