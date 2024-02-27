@@ -24,7 +24,7 @@ struct VertexOutput {
 fn vert(i: VertexInput) -> VertexOutput {
     var o: VertexOutput;
     o.position = u.mvp * i.position;
-    o.normal = (u.model * vec4(i.normal, 0.0)).xyz;
+    o.normal = normalize((u.model * vec4(i.normal, 0.0)).xyz);
     o.uv = i.uv;
     return o;
 }
