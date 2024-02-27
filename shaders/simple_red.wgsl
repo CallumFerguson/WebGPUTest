@@ -5,6 +5,8 @@ struct UniformData {
 }
 
 @group(0) @binding(0) var<uniform> u: UniformData;
+@group(0) @binding(1) var textureSampler: sampler;
+@group(0) @binding(2) var texture: texture_2d<f32>;
 
 struct VertexInput {
     @location(0) position: vec4f,
@@ -33,4 +35,5 @@ fn frag(i: VertexOutput) -> @location(0) vec4f {
     var lightColor = vec3(light, light, light);
 //    return vec4f(lightColor * u.color, 1.0);
     return vec4f(i.uv, 0, 1);
+//    return textureSample(texture, textureSampler, i.uv);
 }

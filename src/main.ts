@@ -1,5 +1,9 @@
 import simpleRedShaderString from "../shaders/simple_red.wgsl?raw";
-import { makeShaderDataDefinitions, makeStructuredView } from "webgpu-utils";
+import {
+  makeShaderDataDefinitions,
+  makeStructuredView,
+  createTextureFromImage,
+} from "webgpu-utils";
 import { mat4, vec3, quat } from "gl-matrix";
 
 function createBuffer(
@@ -31,6 +35,7 @@ async function loadModel(fileName: string): Promise<{
   vertices: Float32Array;
   normals: Float32Array;
   uvs: Float32Array;
+  textureURI: string;
   indices: Uint32Array;
 }> {
   // @ts-ignore
@@ -39,7 +44,7 @@ async function loadModel(fileName: string): Promise<{
   // fetch the files to import
   let files = [fileName];
 
-  return new Promise((resolve, reject) => {
+  const resultJson: any = await new Promise((resolve, reject) => {
     Promise.all(files.map((file) => fetch(file)))
       .then((responses) => {
         return Promise.all(responses.map((res) => res.arrayBuffer()));
@@ -67,24 +72,28 @@ async function loadModel(fileName: string): Promise<{
 
         // parse the result json
         let resultJson = JSON.parse(jsonContent);
-
-        let mesh = resultJson.meshes[0];
-
-        const vertices = Float32Array.from(mesh.vertices);
-        const normals = Float32Array.from(mesh.normals);
-        if (mesh.texturecoords.length < 1) {
-          console.log("texture missing texurecoords");
-        }
-        if (mesh.texturecoords.length > 1) {
-          console.log("texture has multiple sets of texturecoords");
-          console.log(mesh.texturecoords);
-        }
-        const uvs = Float32Array.from(mesh.texturecoords[0]);
-        const indices = Uint32Array.from(mesh.faces.flat());
-
-        resolve({ vertices, normals, uvs, indices });
+        resolve(resultJson);
       });
   });
+
+  let mesh = resultJson.meshes[0];
+
+  const vertices = Float32Array.from(mesh.vertices);
+  const normals = Float32Array.from(mesh.normals);
+  if (mesh.texturecoords.length < 1) {
+    console.log("texture missing texurecoords");
+  }
+  if (mesh.texturecoords.length > 1) {
+    console.log("texture has multiple sets of texturecoords");
+    console.log(mesh.texturecoords);
+  }
+  const uvs = Float32Array.from(mesh.texturecoords[0]);
+  const indices = Uint32Array.from(mesh.faces.flat());
+
+  const textureJson = resultJson.textures[0];
+  const textureURI = `data:image/${textureJson.formathint};base64,${textureJson.data}`;
+
+  return { vertices, normals, uvs, textureURI, indices };
 }
 
 async function main() {
@@ -128,12 +137,20 @@ async function main() {
     alphaMode: "opaque",
   });
 
-  let { vertices, normals, uvs, indices } = await loadModel("duck.glb");
+  let { vertices, normals, uvs, textureURI, indices } = await loadModel(
+    "duck.glb"
+  );
 
   const vertexBuffer = createBuffer(device, vertices, GPUBufferUsage.VERTEX);
   const normalBuffer = createBuffer(device, normals, GPUBufferUsage.VERTEX);
   const uvBuffer = createBuffer(device, uvs, GPUBufferUsage.VERTEX);
   const indexBuffer = createBuffer(device, indices, GPUBufferUsage.INDEX);
+
+  const texture = await createTextureFromImage(device, textureURI, {
+    mips: true,
+    flipY: true,
+  });
+  console.log(texture);
 
   const defs = makeShaderDataDefinitions(simpleRedShaderString);
   const uniformDataValues = makeStructuredView(defs.uniforms.u);
