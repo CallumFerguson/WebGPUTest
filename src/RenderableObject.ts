@@ -14,8 +14,7 @@ export class RenderableObject {
   private mvpMatrix: mat4;
 
   constructor(
-    startX: number,
-    startY: number,
+    position: vec3,
     uniformDataValues: StructuredView,
     uniformBuffer: GPUBuffer,
     gpuBindGroup: GPUBindGroup
@@ -24,8 +23,9 @@ export class RenderableObject {
     quat.rotateX(this.rotation, this.rotation, Math.random() * 100);
     quat.rotateY(this.rotation, this.rotation, Math.random() * 100);
     quat.rotateZ(this.rotation, this.rotation, Math.random() * 100);
-    this.position = vec3.fromValues(startX, startY, -1);
-    this.scale = vec3.fromValues(0.01, 0.01, 0.01);
+    this.position = position;
+    const size = 0.005;
+    this.scale = vec3.fromValues(size, size, size);
 
     this.modelMatrix = mat4.create();
     this.model();

@@ -93,6 +93,9 @@ async function loadModel(fileName: string): Promise<{
 
   const textureJson = resultJson.textures[0];
   const textureURI = `data:image/${textureJson.formathint};base64,${textureJson.data}`;
+  // const textureURI = `data:image/png;base64, iVBORw0KGgoAAAANSUhEUgAAAAUA
+  //   AAAFCAYAAACNbyblAAAAHElEQVQI12P4//8/w38GIAXDIBKE0DHxgljNBAAO
+  //       9TXL0Y4OHwAAAABJRU5ErkJggg==`;
 
   return { vertices, normals, uvs, textureURI, indices };
 }
@@ -257,10 +260,12 @@ async function main() {
 
   let numObjectsX = 10;
   let numObjectsY = 10;
+  let numObjectsZ = 10;
   let renderableObjects: RenderableObject[] = [];
-  for (let i = 0; i < numObjectsX * numObjectsY; i++) {
+  for (let i = 0; i < numObjectsX * numObjectsY * numObjectsZ; i++) {
     let x = i % numObjectsX;
-    let y = Math.floor(i / numObjectsX);
+    let y = Math.floor((i / numObjectsX) % numObjectsY);
+    let z = Math.floor(i / (numObjectsX * numObjectsY));
 
     const uniformDataValues = makeStructuredView(defs.uniforms.u);
     uniformDataValues.set({
@@ -279,8 +284,11 @@ async function main() {
 
     renderableObjects.push(
       new RenderableObject(
-        (x - numObjectsX / 2) / 5,
-        (y - numObjectsY / 2) / 5,
+        vec3.fromValues(
+          (x - numObjectsX / 2) / 5,
+          (y - numObjectsY / 2) / 5,
+          -z / 5 - 1
+        ),
         uniformDataValues,
         uniformBuffer,
         bindGroup
@@ -429,7 +437,7 @@ async function main() {
         renderableObject.uniformDataValues.arrayBuffer
       );
       passEncoder.setBindGroup(1, renderableObject.gpuBindGroup);
-      passEncoder.drawIndexed(Math.floor(indices.length / 3) * 3);
+      passEncoder.drawIndexed(Math.floor(indices.length / 3) * 3, 1);
     }
 
     passEncoder.end();
