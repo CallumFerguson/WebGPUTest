@@ -1,10 +1,11 @@
-import simpleRedShaderString from "../shaders/simple_lit.wgsl?raw";
+import simpleLitShaderString from "../shaders/simple_lit.wgsl?raw";
 import {
   makeShaderDataDefinitions,
   makeStructuredView,
   createTextureFromImage,
 } from "webgpu-utils";
 import { mat4, vec3, quat } from "gl-matrix";
+import { RenderableObject } from "./RenderableObject";
 
 function createBuffer(
   device: GPUDevice,
@@ -156,16 +157,6 @@ async function main() {
     minFilter: "linear",
   });
 
-  const defs = makeShaderDataDefinitions(simpleRedShaderString);
-  const uniformDataValues = makeStructuredView(defs.uniforms.u);
-
-  let model = mat4.create();
-
-  let rotation = quat.create();
-  quat.setAxisAngle(rotation, vec3.fromValues(0, 1, 0), Math.PI / 4);
-  let position = vec3.fromValues(0, 0, -1);
-  let scale = vec3.fromValues(0.05, 0.05, 0.05);
-
   let view = mat4.create();
   let cameraRotation = quat.create();
   let cameraPosition = vec3.fromValues(0, 0, 0);
@@ -178,17 +169,8 @@ async function main() {
   }
   calculateProjection();
 
-  uniformDataValues.set({
-    color: [1, 0.25, 0],
-  });
-
-  const uniformBuffer = device.createBuffer({
-    size: uniformDataValues.arrayBuffer.byteLength,
-    usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
-  });
-
   const shaderModule = device.createShaderModule({
-    code: simpleRedShaderString,
+    code: simpleLitShaderString,
   });
 
   const bindGroupLayout1 = device.createBindGroupLayout({
@@ -271,10 +253,40 @@ async function main() {
     ],
   });
 
-  const bindGroup2 = device.createBindGroup({
-    layout: bindGroupLayout2,
-    entries: [{ binding: 0, resource: { buffer: uniformBuffer } }],
-  });
+  const defs = makeShaderDataDefinitions(simpleLitShaderString);
+
+  let numObjectsX = 10;
+  let numObjectsY = 10;
+  let renderableObjects: RenderableObject[] = [];
+  for (let i = 0; i < numObjectsX * numObjectsY; i++) {
+    let x = i % numObjectsX;
+    let y = Math.floor(i / numObjectsX);
+
+    const uniformDataValues = makeStructuredView(defs.uniforms.u);
+    uniformDataValues.set({
+      color: [1, 1, 1],
+    });
+
+    const uniformBuffer = device.createBuffer({
+      size: uniformDataValues.arrayBuffer.byteLength,
+      usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
+    });
+
+    const bindGroup = device.createBindGroup({
+      layout: bindGroupLayout2,
+      entries: [{ binding: 0, resource: { buffer: uniformBuffer } }],
+    });
+
+    renderableObjects.push(
+      new RenderableObject(
+        (x - numObjectsX / 2) / 5,
+        (y - numObjectsY / 2) / 5,
+        uniformDataValues,
+        uniformBuffer,
+        bindGroup
+      )
+    );
+  }
 
   const renderPassDescriptor: unknown = {
     colorAttachments: [
@@ -385,20 +397,6 @@ async function main() {
         .createView();
     }
 
-    quat.rotateY(rotation, rotation, (Math.PI * deltaTime) / 7.5);
-    position[1] = Math.sin(currentTime * 1.5) / 2 - 0.4;
-    mat4.fromRotationTranslationScale(model, rotation, position, scale);
-
-    let mvp = mat4.create();
-    mat4.mul(mvp, view, model);
-    mat4.mul(mvp, projection, mvp);
-
-    uniformDataValues.set({
-      mvp: mvp,
-      model: model,
-    });
-    device.queue.writeBuffer(uniformBuffer, 0, uniformDataValues.arrayBuffer);
-
     const commandEncoder = device.createCommandEncoder();
     const passEncoder = commandEncoder.beginRenderPass(
       renderPassDescriptor as GPURenderPassDescriptor
@@ -406,12 +404,33 @@ async function main() {
 
     passEncoder.setPipeline(pipeline);
     passEncoder.setBindGroup(0, bindGroup1);
-    passEncoder.setBindGroup(1, bindGroup2);
     passEncoder.setVertexBuffer(0, vertexBuffer);
     passEncoder.setVertexBuffer(1, normalBuffer);
     passEncoder.setVertexBuffer(2, uvBuffer);
     passEncoder.setIndexBuffer(indexBuffer, "uint32");
-    passEncoder.drawIndexed(Math.floor(indices.length / 3) * 3);
+
+    for (let i = 0; i < renderableObjects.length; i++) {
+      const renderableObject = renderableObjects[i];
+
+      quat.rotateY(
+        renderableObject.rotation,
+        renderableObject.rotation,
+        (Math.PI * deltaTime) / 7.5
+      );
+      // renderableObject.position[1] = Math.sin(currentTime * 1.5) / 2 - 0.4;
+
+      renderableObject.uniformDataValues.set({
+        mvp: renderableObject.mvp(view, projection),
+        model: renderableObject.model(),
+      });
+      device.queue.writeBuffer(
+        renderableObject.uniformBuffer,
+        0,
+        renderableObject.uniformDataValues.arrayBuffer
+      );
+      passEncoder.setBindGroup(1, renderableObject.gpuBindGroup);
+      passEncoder.drawIndexed(Math.floor(indices.length / 3) * 3);
+    }
 
     passEncoder.end();
     device.queue.submit([commandEncoder.finish()]);
