@@ -4,9 +4,10 @@ struct UniformData {
     model: mat4x4f,
 }
 
-@group(0) @binding(0) var<uniform> u: UniformData;
-@group(0) @binding(1) var textureSampler: sampler;
-@group(0) @binding(2) var texture: texture_2d<f32>;
+@group(0) @binding(0) var textureSampler: sampler;
+@group(0) @binding(1) var texture: texture_2d<f32>;
+
+@group(1) @binding(0) var<uniform> u: UniformData;
 
 struct VertexInput {
     @location(0) position: vec4f,

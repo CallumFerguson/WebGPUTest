@@ -1,4 +1,4 @@
-import simpleRedShaderString from "../shaders/simple_red.wgsl?raw";
+import simpleRedShaderString from "../shaders/simple_lit.wgsl?raw";
 import {
   makeShaderDataDefinitions,
   makeStructuredView,
@@ -191,28 +191,33 @@ async function main() {
     code: simpleRedShaderString,
   });
 
-  const bindGroupLayout = device.createBindGroupLayout({
+  const bindGroupLayout1 = device.createBindGroupLayout({
     entries: [
       {
         binding: 0,
-        visibility: GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT,
-        buffer: {},
-      },
-      {
-        binding: 1,
         visibility: GPUShaderStage.FRAGMENT,
         sampler: {},
       },
       {
-        binding: 2,
+        binding: 1,
         visibility: GPUShaderStage.FRAGMENT,
         texture: {},
       },
     ],
   });
 
+  const bindGroupLayout2 = device.createBindGroupLayout({
+    entries: [
+      {
+        binding: 0,
+        visibility: GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT,
+        buffer: {},
+      },
+    ],
+  });
+
   const pipelineLayout = device.createPipelineLayout({
-    bindGroupLayouts: [bindGroupLayout],
+    bindGroupLayouts: [bindGroupLayout1, bindGroupLayout2],
   });
 
   const pipelineDescriptor: GPURenderPipelineDescriptor = {
@@ -258,13 +263,17 @@ async function main() {
   };
   const pipeline = device.createRenderPipeline(pipelineDescriptor);
 
-  const bindGroup = device.createBindGroup({
-    layout: bindGroupLayout,
+  const bindGroup1 = device.createBindGroup({
+    layout: bindGroupLayout1,
     entries: [
-      { binding: 0, resource: { buffer: uniformBuffer } },
-      { binding: 1, resource: sampler },
-      { binding: 2, resource: texture.createView() },
+      { binding: 0, resource: sampler },
+      { binding: 1, resource: texture.createView() },
     ],
+  });
+
+  const bindGroup2 = device.createBindGroup({
+    layout: bindGroupLayout2,
+    entries: [{ binding: 0, resource: { buffer: uniformBuffer } }],
   });
 
   const renderPassDescriptor: unknown = {
@@ -396,7 +405,8 @@ async function main() {
     );
 
     passEncoder.setPipeline(pipeline);
-    passEncoder.setBindGroup(0, bindGroup);
+    passEncoder.setBindGroup(0, bindGroup1);
+    passEncoder.setBindGroup(1, bindGroup2);
     passEncoder.setVertexBuffer(0, vertexBuffer);
     passEncoder.setVertexBuffer(1, normalBuffer);
     passEncoder.setVertexBuffer(2, uvBuffer);
