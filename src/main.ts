@@ -137,12 +137,20 @@ async function main() {
   context.configure({
     device,
     format: presentationFormat,
-    alphaMode: "opaque",
+    alphaMode: "premultiplied",
   });
 
-  let { vertices, normals, uvs, textureURI, indices } = await loadModel(
-    "duck.glb"
-  );
+  // let { vertices, normals, uvs, textureURI, indices } = await loadModel(
+  //   "duck.glb"
+  // );
+
+  const vertices = new Float32Array([
+    -0.5, 0.5, 0, 0.5, 0.5, 0, 0.5, -0.5, 0, -0.5, -0.5, 0,
+  ]);
+  const normals = new Float32Array([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]);
+  const uvs = new Float32Array([0, 1, 1, 1, 1, 0, 0, 0]);
+  const indices = new Uint32Array([0, 2, 1, 0, 3, 2]);
+  const textureURI = `data:image/png;base64, iVBORw0KGgoAAAANSUhEUgAAABEAAAARCAYAAAA7bUf6AAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAGQSURBVDhPjdTbK0RRGIbxmWGcJYecEnGDG0ION25J/lx3bpQkRTnkEuUQkkyEGQbjeaa1hpmi+eo3mz17vXvttb81yURFFQoFD41oRgNS+EQWr8glk+XDSv+FwQ7qwhBG0I065HCNM1wgg/cYVvwMAU0YxkIwjh4Y4iwMOcY2dnGFN4NiSD0H77yMVUyiHTXwGu/ygTsYsIYNXBGST4VZdGAWK5iHj1SL+Lge0+jHIrxuAq2Od9GcxQDmwhctiIMry/PecBoz8HHThriYgxiFF/wVEMvvHTyGPhRDXDgH+yaccjVlC3i961ZriMk+f7UBVhxTHO+HjWQTPeML1ZRv6gVv+DLEP25gE9lU1dQTzuErz8cQTxziEs7sv8rDzj2CDZgzxJO32MEW7ESnW1k21DtOsYk93P/uWA+9sNGWYNu7f+wZu9bQRxjgjdaxj4dSiBWCfG32yxTcO/ZB3DvO0L1zgBNkyjZgrBDkT0AnbKg2OBMf+QEupDs4GwOsspBYIcwZxP3jq3fBS9v/pxKJb3rLcyrfzUZyAAAAAElFTkSuQmCC`;
 
   const vertexBuffer = createBuffer(device, vertices, GPUBufferUsage.VERTEX);
   const normalBuffer = createBuffer(device, normals, GPUBufferUsage.VERTEX);
@@ -235,24 +243,40 @@ async function main() {
     fragment: {
       module: shaderModule,
       entryPoint: "frag",
-      targets: [{ format: presentationFormat }],
+      targets: [
+        {
+          format: presentationFormat,
+          blend: {
+            color: {
+              operation: "add",
+              srcFactor: "one",
+              dstFactor: "one-minus-src-alpha",
+            },
+            alpha: {
+              operation: "add",
+              srcFactor: "one",
+              dstFactor: "one-minus-src-alpha",
+            },
+          },
+        },
+      ],
     },
     primitive: {
       topology: "triangle-list",
-      cullMode: "back",
+      cullMode: "none",
     },
     multisample: {
       count: 4,
     },
     depthStencil: {
-      depthWriteEnabled: true,
-      depthCompare: "less",
+      depthWriteEnabled: false,
+      depthCompare: "always",
       format: "depth24plus",
     },
   };
   const pipeline = device.createRenderPipeline(pipelineDescriptor);
 
-  const numObjects = 5000; // 50000
+  const numObjects = 5000; // 500000
   const objectInfos: { model: mat4; velocity: vec3; angularVelocity: vec3 }[] =
     [];
   const size = 0.01;
@@ -293,15 +317,16 @@ async function main() {
     usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
   });
 
-  const viewProjectionBuffer = device.createBuffer({
-    size: 64,
+  const cameraData = makeStructuredView(defs.uniforms.cameraData);
+  const cameraDataBuffer = device.createBuffer({
+    size: cameraData.arrayBuffer.byteLength,
     usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
   });
 
   const bindGroup0 = device.createBindGroup({
     layout: bindGroupLayoutGroup0,
     entries: [
-      { binding: 0, resource: { buffer: viewProjectionBuffer } },
+      { binding: 0, resource: { buffer: cameraDataBuffer } },
       { binding: 1, resource: texture.createView() },
       { binding: 2, resource: sampler },
     ],
@@ -404,6 +429,8 @@ async function main() {
     currentTime *= 0.001;
     const deltaTime = currentTime - previousTime;
 
+    // console.log(1 / deltaTime);
+
     handleCanvasResize();
 
     if (
@@ -424,11 +451,11 @@ async function main() {
     let viewProjection = mat4.create();
     mat4.mul(viewProjection, projection, view);
 
-    device.queue.writeBuffer(
-      viewProjectionBuffer,
-      0,
-      (viewProjection as Float32Array).buffer
-    );
+    cameraData.set({
+      view: view,
+      projection: projection,
+    });
+    device.queue.writeBuffer(cameraDataBuffer, 0, cameraData.arrayBuffer);
 
     for (let i = 0; i < objectInfos.length; i++) {
       const objectInfo = objectInfos[i];
@@ -438,12 +465,12 @@ async function main() {
       vec3.scale(step, step, deltaTime / size);
       mat4.translate(objectInfo.model, objectInfo.model, step);
 
-      mat4.rotate(
-        objectInfo.model,
-        objectInfo.model,
-        vec3.length(objectInfo.angularVelocity) * deltaTime,
-        objectInfo.angularVelocity
-      );
+      // mat4.rotate(
+      //   objectInfo.model,
+      //   objectInfo.model,
+      //   vec3.length(objectInfo.angularVelocity) * deltaTime,
+      //   objectInfo.angularVelocity
+      // );
     }
 
     uniformData.set(
@@ -484,7 +511,7 @@ async function main() {
     //   renderableObject.uniformDataValues.arrayBuffer
     // );
 
-    passEncoder.drawIndexed(Math.floor(indices.length / 3) * 3, numObjects);
+    passEncoder.drawIndexed(indices.length, numObjects);
 
     passEncoder.end();
     device.queue.submit([commandEncoder.finish()]);
