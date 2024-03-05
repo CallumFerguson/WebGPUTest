@@ -27,7 +27,7 @@ fn vert(i: VertexInput) -> VertexOutput {
     var uniformData = uniformData[i.instanceIndex];
 
     var o: VertexOutput;
-    o.position = viewProjection * uniformData.model * (vec4(i.position.xyz * 0.01, 1) + vec4(0, 0, -1, 0));
+    o.position = viewProjection * uniformData.model * i.position;
     o.normal = normalize((uniformData.model * vec4(i.normal, 0.0)).xyz);
     o.uv = i.uv;
     o.instanceIndex = i.instanceIndex;

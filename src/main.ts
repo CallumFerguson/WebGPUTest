@@ -252,17 +252,29 @@ async function main() {
   };
   const pipeline = device.createRenderPipeline(pipelineDescriptor);
 
-  const numObjects = 5000;
-  const objectInfos: { model: mat4; velocity: vec3 }[] = [];
+  const numObjects = 5000; // 50000
+  const objectInfos: { model: mat4; velocity: vec3; angularVelocity: vec3 }[] =
+    [];
+  const size = 0.01;
   for (let i = 0; i < numObjects; i++) {
     const model = mat4.create();
-    mat4.fromTranslation(model, vec3.fromValues(0, 0, 0));
+    mat4.fromRotationTranslationScale(
+      model,
+      quat.create(),
+      vec3.fromValues(0, 0, -1),
+      vec3.fromValues(size, size, size)
+    );
     objectInfos.push({
       model: model,
       velocity: vec3.fromValues(
         (Math.random() - 0.5) / 5,
         (Math.random() - 0.5) / 5,
         (Math.random() - 0.5) / 5
+      ),
+      angularVelocity: vec3.fromValues(
+        (Math.random() - 0.5) * 5,
+        (Math.random() - 0.5) * 5,
+        (Math.random() - 0.5) * 5
       ),
     });
   }
@@ -420,10 +432,18 @@ async function main() {
 
     for (let i = 0; i < objectInfos.length; i++) {
       const objectInfo = objectInfos[i];
+
       const step = vec3.create();
       vec3.copy(step, objectInfo.velocity);
-      vec3.scale(step, step, deltaTime);
+      vec3.scale(step, step, deltaTime / size);
       mat4.translate(objectInfo.model, objectInfo.model, step);
+
+      mat4.rotate(
+        objectInfo.model,
+        objectInfo.model,
+        vec3.length(objectInfo.angularVelocity) * deltaTime,
+        objectInfo.angularVelocity
+      );
     }
 
     uniformData.set(
@@ -463,10 +483,8 @@ async function main() {
     //   0,
     //   renderableObject.uniformDataValues.arrayBuffer
     // );
-    passEncoder.drawIndexed(
-      Math.floor(indices.length / 3) * 3,
-      objectInfos.length
-    );
+
+    passEncoder.drawIndexed(Math.floor(indices.length / 3) * 3, numObjects);
 
     passEncoder.end();
     device.queue.submit([commandEncoder.finish()]);
