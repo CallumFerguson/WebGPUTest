@@ -24,12 +24,11 @@ struct VertexOutput {
 
 @vertex
 fn vert(i: VertexInput) -> VertexOutput {
+    var uniformData = uniformData[i.instanceIndex];
+
     var o: VertexOutput;
-//    var offest = f32(i.instanceIndex) / 100.0;
-//    o.position = u.mvp * i.position + vec4(0, offest, 0, 0);
-    o.position = viewProjection * uniformData[i.instanceIndex].model * (vec4(i.position.xyz * 0.01, 1) + vec4(0, 0, -1, 0));
-//    o.normal = normalize((u.model * vec4(i.normal, 0.0)).xyz);
-    o.normal = i.normal;
+    o.position = viewProjection * uniformData.model * (vec4(i.position.xyz * 0.01, 1) + vec4(0, 0, -1, 0));
+    o.normal = normalize((uniformData.model * vec4(i.normal, 0.0)).xyz);
     o.uv = i.uv;
     o.instanceIndex = i.instanceIndex;
     return o;

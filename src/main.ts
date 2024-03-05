@@ -5,7 +5,6 @@ import {
   createTextureFromImage,
 } from "webgpu-utils";
 import { mat4, vec3, quat } from "gl-matrix";
-import { RenderableObject } from "./RenderableObject";
 
 function createBuffer(
   device: GPUDevice,
@@ -253,37 +252,34 @@ async function main() {
   };
   const pipeline = device.createRenderPipeline(pipelineDescriptor);
 
+  const numObjects = 5000;
+  const objectInfos: { model: mat4; velocity: vec3 }[] = [];
+  for (let i = 0; i < numObjects; i++) {
+    const model = mat4.create();
+    mat4.fromTranslation(model, vec3.fromValues(0, 0, 0));
+    objectInfos.push({
+      model: model,
+      velocity: vec3.fromValues(
+        (Math.random() - 0.5) / 5,
+        (Math.random() - 0.5) / 5,
+        (Math.random() - 0.5) / 5
+      ),
+    });
+  }
+
   const defs = makeShaderDataDefinitions(simpleLitShaderString);
 
-  const uaByteLength = // @ts-ignore
+  const uniformDataByteLength = // @ts-ignore
     defs.storages.uniformData.typeDefinition.elementType.size;
-  const ua = makeStructuredView(
+  const uniformData = makeStructuredView(
     defs.storages.uniformData,
-    new ArrayBuffer(uaByteLength * 3)
+    new ArrayBuffer(uniformDataByteLength * objectInfos.length)
   );
-  const m1 = mat4.create();
-  mat4.fromTranslation(m1, vec3.fromValues(0, 0, 0));
-  const m2 = mat4.create();
-  mat4.fromTranslation(m2, vec3.fromValues(0.5, 0, 0));
-  const m3 = mat4.create();
-  mat4.fromTranslation(m3, vec3.fromValues(0.75, 0.25, 0));
-  ua.set([
-    {
-      model: m1,
-    },
-    {
-      model: m2,
-    },
-    {
-      model: m3,
-    },
-  ]);
 
   const storageBuffer = device.createBuffer({
-    size: ua.arrayBuffer.byteLength,
+    size: uniformData.arrayBuffer.byteLength,
     usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
   });
-  device.queue.writeBuffer(storageBuffer, 0, ua.arrayBuffer);
 
   const viewProjectionBuffer = device.createBuffer({
     size: 64,
@@ -422,6 +418,22 @@ async function main() {
       (viewProjection as Float32Array).buffer
     );
 
+    for (let i = 0; i < objectInfos.length; i++) {
+      const objectInfo = objectInfos[i];
+      const step = vec3.create();
+      vec3.copy(step, objectInfo.velocity);
+      vec3.scale(step, step, deltaTime);
+      mat4.translate(objectInfo.model, objectInfo.model, step);
+    }
+
+    uniformData.set(
+      objectInfos.map((objectInfo) => {
+        return { model: objectInfo.model };
+      })
+    );
+
+    device.queue.writeBuffer(storageBuffer, 0, uniformData.arrayBuffer);
+
     const commandEncoder = device.createCommandEncoder();
     const passEncoder = commandEncoder.beginRenderPass(
       renderPassDescriptor as GPURenderPassDescriptor
@@ -451,7 +463,10 @@ async function main() {
     //   0,
     //   renderableObject.uniformDataValues.arrayBuffer
     // );
-    passEncoder.drawIndexed(Math.floor(indices.length / 3) * 3, 3);
+    passEncoder.drawIndexed(
+      Math.floor(indices.length / 3) * 3,
+      objectInfos.length
+    );
 
     passEncoder.end();
     device.queue.submit([commandEncoder.finish()]);
