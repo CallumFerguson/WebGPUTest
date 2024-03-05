@@ -188,6 +188,11 @@ async function main() {
         visibility: GPUShaderStage.FRAGMENT,
         texture: {},
       },
+      {
+        binding: 2,
+        visibility: GPUShaderStage.FRAGMENT,
+        buffer: { type: "read-only-storage" },
+      },
     ],
   });
 
@@ -248,15 +253,41 @@ async function main() {
   };
   const pipeline = device.createRenderPipeline(pipelineDescriptor);
 
+  const defs = makeShaderDataDefinitions(simpleLitShaderString);
+
+  // @ts-ignore
+  const uaByteLength = defs.storages.ua.typeDefinition.elementType.size;
+  const ua = makeStructuredView(
+    defs.storages.ua,
+    new ArrayBuffer(uaByteLength * 3)
+  );
+  ua.set([
+    {
+      color: [1, 0, 0],
+    },
+    {
+      color: [0, 1, 0],
+    },
+    {
+      color: [0, 0, 1],
+    },
+  ]);
+
+  const storageBuffer = device.createBuffer({
+    size: ua.arrayBuffer.byteLength,
+    usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
+  });
+
+  device.queue.writeBuffer(storageBuffer, 0, ua.arrayBuffer);
+
   const bindGroup1 = device.createBindGroup({
     layout: bindGroupLayout1,
     entries: [
       { binding: 0, resource: sampler },
       { binding: 1, resource: texture.createView() },
+      { binding: 2, resource: { buffer: storageBuffer } },
     ],
   });
-
-  const defs = makeShaderDataDefinitions(simpleLitShaderString);
 
   let numObjectsX = 10;
   let numObjectsY = 10;
@@ -423,7 +454,7 @@ async function main() {
       quat.rotateY(
         renderableObject.rotation,
         renderableObject.rotation,
-        (Math.PI * deltaTime) / 7.5
+        Math.PI * deltaTime
       );
       // renderableObject.position[1] = Math.sin(currentTime * 1.5) / 2 - 0.4;
 

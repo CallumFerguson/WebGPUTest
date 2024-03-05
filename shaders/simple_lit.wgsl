@@ -6,6 +6,7 @@ struct UniformData {
 
 @group(0) @binding(0) var textureSampler: sampler;
 @group(0) @binding(1) var texture: texture_2d<f32>;
+@group(0) @binding(2) var<storage, read> ua: array<UniformData>;
 
 @group(1) @binding(0) var<uniform> u: UniformData;
 
@@ -35,5 +36,5 @@ fn frag(i: VertexOutput) -> @location(0) vec4f {
     var light = min(max(dot(normalize(i.normal), normalize(vec3(-0.5, 0.5, 0.5))), 0) + 0.15, 1);
     var lightColor = vec3(light, light, light);
     var diffuseColor = textureSample(texture, textureSampler, i.uv).rgb;
-    return vec4(diffuseColor * lightColor * u.color, 1);
+    return vec4(diffuseColor * lightColor * u.color * ua[1].color, 1);
 }
