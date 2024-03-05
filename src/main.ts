@@ -176,12 +176,12 @@ async function main() {
     code: simpleLitShaderString,
   });
 
-  const bindGroupLayout1 = device.createBindGroupLayout({
+  const bindGroupLayoutGroup0 = device.createBindGroupLayout({
     entries: [
       {
         binding: 0,
-        visibility: GPUShaderStage.FRAGMENT,
-        sampler: {},
+        visibility: GPUShaderStage.VERTEX,
+        buffer: {},
       },
       {
         binding: 1,
@@ -191,23 +191,23 @@ async function main() {
       {
         binding: 2,
         visibility: GPUShaderStage.FRAGMENT,
+        sampler: {},
+      },
+    ],
+  });
+
+  const bindGroupLayoutGroup1 = device.createBindGroupLayout({
+    entries: [
+      {
+        binding: 0,
+        visibility: GPUShaderStage.VERTEX,
         buffer: { type: "read-only-storage" },
       },
     ],
   });
 
-  const bindGroupLayout2 = device.createBindGroupLayout({
-    entries: [
-      {
-        binding: 0,
-        visibility: GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT,
-        buffer: {},
-      },
-    ],
-  });
-
   const pipelineLayout = device.createPipelineLayout({
-    bindGroupLayouts: [bindGroupLayout1, bindGroupLayout2],
+    bindGroupLayouts: [bindGroupLayoutGroup0, bindGroupLayoutGroup1],
   });
 
   const pipelineDescriptor: GPURenderPipelineDescriptor = {
@@ -255,21 +255,27 @@ async function main() {
 
   const defs = makeShaderDataDefinitions(simpleLitShaderString);
 
-  // @ts-ignore
-  const uaByteLength = defs.storages.ua.typeDefinition.elementType.size;
+  const uaByteLength = // @ts-ignore
+    defs.storages.uniformData.typeDefinition.elementType.size;
   const ua = makeStructuredView(
-    defs.storages.ua,
+    defs.storages.uniformData,
     new ArrayBuffer(uaByteLength * 3)
   );
+  const m1 = mat4.create();
+  mat4.fromTranslation(m1, vec3.fromValues(0, 0, 0));
+  const m2 = mat4.create();
+  mat4.fromTranslation(m2, vec3.fromValues(0.5, 0, 0));
+  const m3 = mat4.create();
+  mat4.fromTranslation(m3, vec3.fromValues(0.75, 0.25, 0));
   ua.set([
     {
-      color: [1, 0, 0],
+      model: m1,
     },
     {
-      color: [0, 1, 0],
+      model: m2,
     },
     {
-      color: [0, 0, 1],
+      model: m3,
     },
   ]);
 
@@ -277,55 +283,26 @@ async function main() {
     size: ua.arrayBuffer.byteLength,
     usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
   });
-
   device.queue.writeBuffer(storageBuffer, 0, ua.arrayBuffer);
 
-  const bindGroup1 = device.createBindGroup({
-    layout: bindGroupLayout1,
+  const viewProjectionBuffer = device.createBuffer({
+    size: 64,
+    usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
+  });
+
+  const bindGroup0 = device.createBindGroup({
+    layout: bindGroupLayoutGroup0,
     entries: [
-      { binding: 0, resource: sampler },
+      { binding: 0, resource: { buffer: viewProjectionBuffer } },
       { binding: 1, resource: texture.createView() },
-      { binding: 2, resource: { buffer: storageBuffer } },
+      { binding: 2, resource: sampler },
     ],
   });
 
-  let numObjectsX = 10;
-  let numObjectsY = 10;
-  let numObjectsZ = 10;
-  let renderableObjects: RenderableObject[] = [];
-  for (let i = 0; i < numObjectsX * numObjectsY * numObjectsZ; i++) {
-    let x = i % numObjectsX;
-    let y = Math.floor((i / numObjectsX) % numObjectsY);
-    let z = Math.floor(i / (numObjectsX * numObjectsY));
-
-    const uniformDataValues = makeStructuredView(defs.uniforms.u);
-    uniformDataValues.set({
-      color: [1, 1, 1],
-    });
-
-    const uniformBuffer = device.createBuffer({
-      size: uniformDataValues.arrayBuffer.byteLength,
-      usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
-    });
-
-    const bindGroup = device.createBindGroup({
-      layout: bindGroupLayout2,
-      entries: [{ binding: 0, resource: { buffer: uniformBuffer } }],
-    });
-
-    renderableObjects.push(
-      new RenderableObject(
-        vec3.fromValues(
-          (x - numObjectsX / 2) / 5,
-          (y - numObjectsY / 2) / 5,
-          -z / 5 - 1
-        ),
-        uniformDataValues,
-        uniformBuffer,
-        bindGroup
-      )
-    );
-  }
+  const bindGroup1 = device.createBindGroup({
+    layout: bindGroupLayoutGroup1,
+    entries: [{ binding: 0, resource: { buffer: storageBuffer } }],
+  });
 
   const renderPassDescriptor: unknown = {
     colorAttachments: [
@@ -436,40 +413,45 @@ async function main() {
         .createView();
     }
 
+    let viewProjection = mat4.create();
+    mat4.mul(viewProjection, projection, view);
+
+    device.queue.writeBuffer(
+      viewProjectionBuffer,
+      0,
+      (viewProjection as Float32Array).buffer
+    );
+
     const commandEncoder = device.createCommandEncoder();
     const passEncoder = commandEncoder.beginRenderPass(
       renderPassDescriptor as GPURenderPassDescriptor
     );
 
     passEncoder.setPipeline(pipeline);
-    passEncoder.setBindGroup(0, bindGroup1);
+    passEncoder.setBindGroup(0, bindGroup0);
+    passEncoder.setBindGroup(1, bindGroup1);
     passEncoder.setVertexBuffer(0, vertexBuffer);
     passEncoder.setVertexBuffer(1, normalBuffer);
     passEncoder.setVertexBuffer(2, uvBuffer);
     passEncoder.setIndexBuffer(indexBuffer, "uint32");
 
-    for (let i = 0; i < renderableObjects.length; i++) {
-      const renderableObject = renderableObjects[i];
+    // quat.rotateY(
+    //   renderableObject.rotation,
+    //   renderableObject.rotation,
+    //   Math.PI * deltaTime
+    // );
+    // renderableObject.position[1] = Math.sin(currentTime * 1.5) / 2 - 0.4;
 
-      quat.rotateY(
-        renderableObject.rotation,
-        renderableObject.rotation,
-        Math.PI * deltaTime
-      );
-      // renderableObject.position[1] = Math.sin(currentTime * 1.5) / 2 - 0.4;
-
-      renderableObject.uniformDataValues.set({
-        mvp: renderableObject.mvp(view, projection),
-        model: renderableObject.model(),
-      });
-      device.queue.writeBuffer(
-        renderableObject.uniformBuffer,
-        0,
-        renderableObject.uniformDataValues.arrayBuffer
-      );
-      passEncoder.setBindGroup(1, renderableObject.gpuBindGroup);
-      passEncoder.drawIndexed(Math.floor(indices.length / 3) * 3, 1);
-    }
+    // renderableObject.uniformDataValues.set({
+    //   mvp: renderableObject.mvp(view, projection),
+    //   model: renderableObject.model(),
+    // });
+    // device.queue.writeBuffer(
+    //   renderableObject.uniformBuffer,
+    //   0,
+    //   renderableObject.uniformDataValues.arrayBuffer
+    // );
+    passEncoder.drawIndexed(Math.floor(indices.length / 3) * 3, 3);
 
     passEncoder.end();
     device.queue.submit([commandEncoder.finish()]);
