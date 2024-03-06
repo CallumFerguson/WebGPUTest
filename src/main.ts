@@ -166,7 +166,7 @@ async function main() {
   };
   const pipeline = device.createRenderPipeline(pipelineDescriptor);
 
-  const numObjects = 50000; // 500000
+  const numObjects = 1000000;
   const objectInfos: { model: mat4; velocity: vec3; angularVelocity: vec3 }[] =
     [];
   const size = 0.01;
@@ -359,7 +359,7 @@ async function main() {
     currentTime *= 0.001;
     const deltaTime = currentTime - previousTime;
 
-    console.log(1 / deltaTime);
+    // console.log(1 / deltaTime);
 
     handleCanvasResize();
 
@@ -454,7 +454,7 @@ async function main() {
 
     computePassEncoder.setPipeline(computePipeline);
     computePassEncoder.setBindGroup(0, computeBindGroup0);
-    computePassEncoder.dispatchWorkgroups(objectInfos.length);
+    computePassEncoder.dispatchWorkgroups(objectInfos.length / 64);
     computePassEncoder.end();
 
     // commandEncoder.copyBufferToBuffer(

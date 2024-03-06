@@ -5,7 +5,7 @@ struct UniformData {
 
 @group(0) @binding(0) var<storage, read_write> uniformData: array<UniformData>;
 
-@compute @workgroup_size(1) fn computeSomething(@builtin(global_invocation_id) id: vec3u) {
+@compute @workgroup_size(64) fn computeSomething(@builtin(global_invocation_id) id: vec3u) {
     let i = id.x;
     uniformData[i].model[3][0] += uniformData[i].velocity.x * 0.005;
     uniformData[i].model[3][1] += uniformData[i].velocity.y * 0.005;
