@@ -166,7 +166,7 @@ async function main() {
   };
   const pipeline = device.createRenderPipeline(pipelineDescriptor);
 
-  const numObjects = 4000000;
+  const numObjects = 40000;
   const objectInfos: {
     position: vec3;
     velocity: vec3;
@@ -254,8 +254,21 @@ async function main() {
     ],
   });
 
+  const computeBindGroupLayoutGroup1 = device.createBindGroupLayout({
+    entries: [
+      {
+        binding: 0,
+        visibility: GPUShaderStage.COMPUTE,
+        buffer: {},
+      },
+    ],
+  });
+
   const computePipelineLayout = device.createPipelineLayout({
-    bindGroupLayouts: [computeBindGroupLayoutGroup0],
+    bindGroupLayouts: [
+      computeBindGroupLayoutGroup0,
+      computeBindGroupLayoutGroup1,
+    ],
   });
 
   const computePipeline = device.createComputePipeline({
@@ -269,6 +282,19 @@ async function main() {
   const computeBindGroup0 = device.createBindGroup({
     layout: computeBindGroupLayoutGroup0,
     entries: [{ binding: 0, resource: { buffer: storageBuffer } }],
+  });
+
+  const computeDefs = makeShaderDataDefinitions(computeShaderString);
+  const timeData = makeStructuredView(computeDefs.uniforms.timeData);
+
+  const timeBuffer = device.createBuffer({
+    size: timeData.arrayBuffer.byteLength,
+    usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
+  });
+
+  const computeBindGroup1 = device.createBindGroup({
+    layout: computeBindGroupLayoutGroup1,
+    entries: [{ binding: 0, resource: { buffer: timeBuffer } }],
   });
 
   let depthTexture: GPUTexture | undefined = undefined;
@@ -347,6 +373,11 @@ async function main() {
   async function render(currentTime: number) {
     currentTime *= 0.001;
     const deltaTime = currentTime - previousTime;
+
+    timeData.set({
+      deltaTime,
+    });
+    device.queue.writeBuffer(timeBuffer, 0, timeData.arrayBuffer);
 
     // console.log(1 / deltaTime);
 
@@ -443,6 +474,7 @@ async function main() {
 
     computePassEncoder.setPipeline(computePipeline);
     computePassEncoder.setBindGroup(0, computeBindGroup0);
+    computePassEncoder.setBindGroup(1, computeBindGroup1);
     computePassEncoder.dispatchWorkgroups(objectInfos.length / 64);
     computePassEncoder.end();
 
