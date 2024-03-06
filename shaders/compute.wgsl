@@ -9,5 +9,16 @@ struct TimeData {
 
 @compute @workgroup_size(128) fn computeSomething(@builtin(global_invocation_id) id: vec3u) {
     let i = id.x;
+
+    var gravityForceDirection = vec3(0, 0, -1) - positions[i];
+    var gravityForceDirectionNormalized = normalize(gravityForceDirection);
+    var distance = length(gravityForceDirection);
+
+    var force = gravityForceDirectionNormalized / (distance * distance) * 1;
+
+    velocities[i] += force * timeData.deltaTime;
+//
     positions[i] += velocities[i] * timeData.deltaTime;
+
+//    positions[i] += force * timeData.deltaTime;
 }

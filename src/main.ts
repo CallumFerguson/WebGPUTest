@@ -2,7 +2,7 @@ import pointParticleShaderString from "../shaders/pointParticle.wgsl?raw";
 import computeShaderString from "../shaders/compute.wgsl?raw";
 import { makeShaderDataDefinitions, makeStructuredView } from "webgpu-utils";
 import { mat4, vec3, quat } from "gl-matrix";
-import { getDevice, randomDirection } from "./utility";
+import { getDevice } from "./utility";
 
 async function main() {
   const { gpu, device } = await getDevice();
@@ -109,7 +109,7 @@ async function main() {
   };
   const pipeline = device.createRenderPipeline(pipelineDescriptor);
 
-  const numObjects = 80000; // 8000000
+  const numObjects = 8000000; // 8000000
 
   const positionsArrayBuffer = new ArrayBuffer(numObjects * 16);
   const positionsArrayBufferView = new Float32Array(positionsArrayBuffer);
@@ -125,15 +125,21 @@ async function main() {
     usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
   });
 
-  const velocity = vec3.create();
+  // const position = vec3.create();
+  // const velocity = vec3.create();
   for (let i = 0; i < numObjects; i++) {
-    randomDirection(velocity, Math.random() * 0.2 - 0.1);
+    // randomDirection(position, Math.random() * 0.25 + 0.25);
+    // randomDirection(velocity, Math.random() * 0.25);
 
+    // positionsArrayBufferView[i * 4 + 2] = -1;
+
+    positionsArrayBufferView[i * 4] = Math.random() * 0.1 - 0.05;
+    positionsArrayBufferView[i * 4 + 1] = 0.5 + Math.random() * 0.1;
     positionsArrayBufferView[i * 4 + 2] = -1;
 
-    velocitiesArrayBufferView[i * 4] = velocity[0];
-    velocitiesArrayBufferView[i * 4 + 1] = velocity[1];
-    velocitiesArrayBufferView[i * 4 + 2] = velocity[2];
+    velocitiesArrayBufferView[i * 4] = 1.5 + Math.random() * 0.2 - 0.1;
+    velocitiesArrayBufferView[i * 4 + 1] = Math.random() * 0.4 - 0.2;
+    velocitiesArrayBufferView[i * 4 + 2] = 0;
   }
 
   device.queue.writeBuffer(positionsBuffer, 0, positionsArrayBuffer);
@@ -315,7 +321,7 @@ async function main() {
     const deltaTime = currentTime - previousTime;
 
     timeData.set({
-      deltaTime,
+      deltaTime: Math.min(deltaTime, 0.1),
     });
     device.queue.writeBuffer(timeBuffer, 0, timeData.arrayBuffer);
 

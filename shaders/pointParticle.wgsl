@@ -26,5 +26,5 @@ fn vert(i: VertexInput) -> VertexOutput {
 
 @fragment
 fn frag(i: VertexOutput) -> @location(0) vec4f {
-    return vec4(1, 0, 0, 1);
+    return vec4(1, 0.15, 0, 1);
 }
