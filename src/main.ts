@@ -1,12 +1,8 @@
-import simpleLitShaderString from "../shaders/simple_lit.wgsl?raw";
+import pointParticleShaderString from "../shaders/pointParticle.wgsl?raw";
 import computeShaderString from "../shaders/compute.wgsl?raw";
-import {
-  makeShaderDataDefinitions,
-  makeStructuredView,
-  createTextureFromImage,
-} from "webgpu-utils";
+import { makeShaderDataDefinitions, makeStructuredView } from "webgpu-utils";
 import { mat4, vec3, quat } from "gl-matrix";
-import { createBuffer, getDevice, randomDirection } from "./utility";
+import { getDevice, randomDirection } from "./utility";
 
 async function main() {
   const { gpu, device } = await getDevice();
@@ -30,33 +26,6 @@ async function main() {
     alphaMode: "opaque",
   });
 
-  // let { vertices, normals, uvs, textureURI, indices } = await loadModel(
-  //   "duck.glb"
-  // );
-
-  const vertices = new Float32Array([
-    -0.5, 0.5, 0, 0.5, 0.5, 0, 0.5, -0.5, 0, -0.5, -0.5, 0,
-  ]);
-  const normals = new Float32Array([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]);
-  const uvs = new Float32Array([0, 1, 1, 1, 1, 0, 0, 0]);
-  const indices = new Uint32Array([0, 2, 1, 0, 3, 2]);
-  const textureURI = `data:image/png;base64, iVBORw0KGgoAAAANSUhEUgAAABEAAAARCAYAAAA7bUf6AAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAGQSURBVDhPjdTbK0RRGIbxmWGcJYecEnGDG0ION25J/lx3bpQkRTnkEuUQkkyEGQbjeaa1hpmi+eo3mz17vXvttb81yURFFQoFD41oRgNS+EQWr8glk+XDSv+FwQ7qwhBG0I065HCNM1wgg/cYVvwMAU0YxkIwjh4Y4iwMOcY2dnGFN4NiSD0H77yMVUyiHTXwGu/ygTsYsIYNXBGST4VZdGAWK5iHj1SL+Lge0+jHIrxuAq2Od9GcxQDmwhctiIMry/PecBoz8HHThriYgxiFF/wVEMvvHTyGPhRDXDgH+yaccjVlC3i961ZriMk+f7UBVhxTHO+HjWQTPeML1ZRv6gVv+DLEP25gE9lU1dQTzuErz8cQTxziEs7sv8rDzj2CDZgzxJO32MEW7ESnW1k21DtOsYk93P/uWA+9sNGWYNu7f+wZu9bQRxjgjdaxj4dSiBWCfG32yxTcO/ZB3DvO0L1zgBNkyjZgrBDkT0AnbKg2OBMf+QEupDs4GwOsspBYIcwZxP3jq3fBS9v/pxKJb3rLcyrfzUZyAAAAAElFTkSuQmCC`;
-
-  const vertexBuffer = createBuffer(device, vertices, GPUBufferUsage.VERTEX);
-  const normalBuffer = createBuffer(device, normals, GPUBufferUsage.VERTEX);
-  const uvBuffer = createBuffer(device, uvs, GPUBufferUsage.VERTEX);
-  const indexBuffer = createBuffer(device, indices, GPUBufferUsage.INDEX);
-
-  const texture = await createTextureFromImage(device, textureURI, {
-    mips: true,
-    flipY: true,
-  });
-
-  const sampler = device.createSampler({
-    magFilter: "linear",
-    minFilter: "linear",
-  });
-
   let view = mat4.create();
   let cameraRotation = quat.create();
   let cameraPosition = vec3.fromValues(0, 0, 0);
@@ -70,7 +39,7 @@ async function main() {
   calculateProjection();
 
   const shaderModule = device.createShaderModule({
-    code: simpleLitShaderString,
+    code: pointParticleShaderString,
   });
 
   const bindGroupLayoutGroup0 = device.createBindGroupLayout({
@@ -79,16 +48,6 @@ async function main() {
         binding: 0,
         visibility: GPUShaderStage.VERTEX,
         buffer: {},
-      },
-      {
-        binding: 1,
-        visibility: GPUShaderStage.FRAGMENT,
-        texture: {},
-      },
-      {
-        binding: 2,
-        visibility: GPUShaderStage.FRAGMENT,
-        sampler: {},
       },
     ],
   });
@@ -112,23 +71,7 @@ async function main() {
     vertex: {
       module: shaderModule,
       entryPoint: "vert",
-      buffers: [
-        // vertex
-        {
-          arrayStride: 3 * 4,
-          attributes: [{ shaderLocation: 0, offset: 0, format: "float32x3" }],
-        },
-        // normal
-        {
-          arrayStride: 3 * 4,
-          attributes: [{ shaderLocation: 1, offset: 0, format: "float32x3" }],
-        },
-        // uv
-        {
-          arrayStride: 2 * 4,
-          attributes: [{ shaderLocation: 2, offset: 0, format: "float32x2" }],
-        },
-      ],
+      buffers: [],
     },
     fragment: {
       module: shaderModule,
@@ -152,11 +95,11 @@ async function main() {
       ],
     },
     primitive: {
-      topology: "triangle-list",
+      topology: "point-list",
       cullMode: "none",
     },
     multisample: {
-      count: 4,
+      count: 1,
     },
     depthStencil: {
       depthWriteEnabled: false,
@@ -166,44 +109,37 @@ async function main() {
   };
   const pipeline = device.createRenderPipeline(pipelineDescriptor);
 
-  const numObjects = 40000;
-  const objectInfos: {
-    position: vec3;
-    velocity: vec3;
-  }[] = [];
+  const numObjects = 80000; // 8000000
+
+  const positionsArrayBuffer = new ArrayBuffer(numObjects * 16);
+  const positionsArrayBufferView = new Float32Array(positionsArrayBuffer);
+  const positionsBuffer = device.createBuffer({
+    size: positionsArrayBuffer.byteLength,
+    usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
+  });
+
+  const velocitiesArrayBuffer = new ArrayBuffer(numObjects * 16);
+  const velocitiesArrayBufferView = new Float32Array(velocitiesArrayBuffer);
+  const velocitiesBuffer = device.createBuffer({
+    size: velocitiesArrayBuffer.byteLength,
+    usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
+  });
+
+  const velocity = vec3.create();
   for (let i = 0; i < numObjects; i++) {
-    objectInfos.push({
-      position: vec3.fromValues(0, 0, -1),
-      velocity: randomDirection(Math.random() * 0.2 - 0.1),
-    });
+    randomDirection(velocity, Math.random() * 0.2 - 0.1);
+
+    positionsArrayBufferView[i * 4 + 2] = -1;
+
+    velocitiesArrayBufferView[i * 4] = velocity[0];
+    velocitiesArrayBufferView[i * 4 + 1] = velocity[1];
+    velocitiesArrayBufferView[i * 4 + 2] = velocity[2];
   }
 
-  const defs = makeShaderDataDefinitions(simpleLitShaderString);
+  device.queue.writeBuffer(positionsBuffer, 0, positionsArrayBuffer);
+  device.queue.writeBuffer(velocitiesBuffer, 0, velocitiesArrayBuffer);
 
-  const uniformDataByteLength = // @ts-ignore
-    defs.storages.uniformData.typeDefinition.elementType.size;
-  const uniformData = makeStructuredView(
-    defs.storages.uniformData,
-    new ArrayBuffer(uniformDataByteLength * objectInfos.length)
-  );
-  uniformData.set(
-    objectInfos.map((objectInfo) => {
-      return { position: objectInfo.position, velocity: objectInfo.velocity };
-    })
-  );
-
-  const storageBuffer = device.createBuffer({
-    size: uniformData.arrayBuffer.byteLength,
-    usage:
-      GPUBufferUsage.STORAGE |
-      GPUBufferUsage.COPY_DST |
-      GPUBufferUsage.COPY_SRC,
-  });
-  device.queue.writeBuffer(storageBuffer, 0, uniformData.arrayBuffer);
-  // const storageResultBuffer = device.createBuffer({
-  //   size: uniformData.arrayBuffer.byteLength,
-  //   usage: GPUBufferUsage.MAP_READ | GPUBufferUsage.COPY_DST,
-  // });
+  const defs = makeShaderDataDefinitions(pointParticleShaderString);
 
   const cameraData = makeStructuredView(defs.uniforms.cameraData);
   const cameraDataBuffer = device.createBuffer({
@@ -213,16 +149,12 @@ async function main() {
 
   const bindGroup0 = device.createBindGroup({
     layout: bindGroupLayoutGroup0,
-    entries: [
-      { binding: 0, resource: { buffer: cameraDataBuffer } },
-      { binding: 1, resource: texture.createView() },
-      { binding: 2, resource: sampler },
-    ],
+    entries: [{ binding: 0, resource: { buffer: cameraDataBuffer } }],
   });
 
   const bindGroup1 = device.createBindGroup({
     layout: bindGroupLayoutGroup1,
-    entries: [{ binding: 0, resource: { buffer: storageBuffer } }],
+    entries: [{ binding: 0, resource: { buffer: positionsBuffer } }],
   });
 
   const renderPassDescriptor: unknown = {
@@ -249,7 +181,7 @@ async function main() {
       {
         binding: 0,
         visibility: GPUShaderStage.COMPUTE,
-        buffer: { type: "storage" },
+        buffer: {},
       },
     ],
   });
@@ -259,7 +191,12 @@ async function main() {
       {
         binding: 0,
         visibility: GPUShaderStage.COMPUTE,
-        buffer: {},
+        buffer: { type: "storage" },
+      },
+      {
+        binding: 1,
+        visibility: GPUShaderStage.COMPUTE,
+        buffer: { type: "storage" },
       },
     ],
   });
@@ -279,11 +216,6 @@ async function main() {
     },
   });
 
-  const computeBindGroup0 = device.createBindGroup({
-    layout: computeBindGroupLayoutGroup0,
-    entries: [{ binding: 0, resource: { buffer: storageBuffer } }],
-  });
-
   const computeDefs = makeShaderDataDefinitions(computeShaderString);
   const timeData = makeStructuredView(computeDefs.uniforms.timeData);
 
@@ -292,9 +224,17 @@ async function main() {
     usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
   });
 
+  const computeBindGroup0 = device.createBindGroup({
+    layout: computeBindGroupLayoutGroup0,
+    entries: [{ binding: 0, resource: { buffer: timeBuffer } }],
+  });
+
   const computeBindGroup1 = device.createBindGroup({
     layout: computeBindGroupLayoutGroup1,
-    entries: [{ binding: 0, resource: { buffer: timeBuffer } }],
+    entries: [
+      { binding: 0, resource: { buffer: positionsBuffer } },
+      { binding: 1, resource: { buffer: velocitiesBuffer } },
+    ],
   });
 
   let depthTexture: GPUTexture | undefined = undefined;
@@ -444,10 +384,6 @@ async function main() {
     passEncoder.setPipeline(pipeline);
     passEncoder.setBindGroup(0, bindGroup0);
     passEncoder.setBindGroup(1, bindGroup1);
-    passEncoder.setVertexBuffer(0, vertexBuffer);
-    passEncoder.setVertexBuffer(1, normalBuffer);
-    passEncoder.setVertexBuffer(2, uvBuffer);
-    passEncoder.setIndexBuffer(indexBuffer, "uint32");
 
     // quat.rotateY(
     //   renderableObject.rotation,
@@ -466,7 +402,8 @@ async function main() {
     //   renderableObject.uniformDataValues.arrayBuffer
     // );
 
-    passEncoder.drawIndexed(indices.length, numObjects);
+    // passEncoder.drawIndexed(indices.length, numObjects);
+    passEncoder.draw(numObjects);
 
     passEncoder.end();
 
@@ -475,7 +412,7 @@ async function main() {
     computePassEncoder.setPipeline(computePipeline);
     computePassEncoder.setBindGroup(0, computeBindGroup0);
     computePassEncoder.setBindGroup(1, computeBindGroup1);
-    computePassEncoder.dispatchWorkgroups(objectInfos.length / 64);
+    computePassEncoder.dispatchWorkgroups(numObjects / 128);
     computePassEncoder.end();
 
     // commandEncoder.copyBufferToBuffer(

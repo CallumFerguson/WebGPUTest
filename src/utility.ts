@@ -115,7 +115,7 @@ export async function loadModel(fileName: string): Promise<{
   return { vertices, normals, uvs, textureURI, indices };
 }
 
-export function randomDirection(magnitude: number = 1): vec3 {
+export function randomDirection(randomVec3: vec3, magnitude: number = 1): vec3 {
   const theta = Math.random() * 2 * Math.PI;
   const phi = Math.random() * Math.PI;
 
@@ -123,7 +123,9 @@ export function randomDirection(magnitude: number = 1): vec3 {
   const y = Math.sin(phi) * Math.sin(theta);
   const z = Math.cos(phi);
 
-  let randomVec3 = vec3.fromValues(x, y, z);
+  randomVec3[0] = x;
+  randomVec3[1] = y;
+  randomVec3[2] = z;
 
   vec3.normalize(randomVec3, randomVec3);
   vec3.scale(randomVec3, randomVec3, magnitude);
