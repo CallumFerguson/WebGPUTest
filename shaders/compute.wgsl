@@ -1,5 +1,5 @@
 struct UniformData {
-    model: mat4x4f,
+    position: vec3f,
     velocity: vec3f,
 }
 
@@ -7,7 +7,5 @@ struct UniformData {
 
 @compute @workgroup_size(64) fn computeSomething(@builtin(global_invocation_id) id: vec3u) {
     let i = id.x;
-    uniformData[i].model[3][0] += uniformData[i].velocity.x * 0.005;
-    uniformData[i].model[3][1] += uniformData[i].velocity.y * 0.005;
-    uniformData[i].model[3][2] += uniformData[i].velocity.z * 0.005;
+    uniformData[i].position += uniformData[i].velocity * 0.01;
 }

@@ -166,26 +166,15 @@ async function main() {
   };
   const pipeline = device.createRenderPipeline(pipelineDescriptor);
 
-  const numObjects = 1000000;
-  const objectInfos: { model: mat4; velocity: vec3; angularVelocity: vec3 }[] =
-    [];
-  const size = 0.01;
+  const numObjects = 4000000;
+  const objectInfos: {
+    position: vec3;
+    velocity: vec3;
+  }[] = [];
   for (let i = 0; i < numObjects; i++) {
-    const model = mat4.create();
-    mat4.fromRotationTranslationScale(
-      model,
-      quat.create(),
-      vec3.fromValues(0, 0, -1),
-      vec3.fromValues(size, size, size)
-    );
     objectInfos.push({
-      model: model,
+      position: vec3.fromValues(0, 0, -1),
       velocity: randomDirection(Math.random() * 0.2 - 0.1),
-      angularVelocity: vec3.fromValues(
-        (Math.random() - 0.5) * 5,
-        (Math.random() - 0.5) * 5,
-        (Math.random() - 0.5) * 5
-      ),
     });
   }
 
@@ -199,7 +188,7 @@ async function main() {
   );
   uniformData.set(
     objectInfos.map((objectInfo) => {
-      return { model: objectInfo.model, velocity: objectInfo.velocity };
+      return { position: objectInfo.position, velocity: objectInfo.velocity };
     })
   );
 
@@ -359,7 +348,7 @@ async function main() {
     currentTime *= 0.001;
     const deltaTime = currentTime - previousTime;
 
-    // console.log(1 / deltaTime);
+    console.log(1 / deltaTime);
 
     handleCanvasResize();
 

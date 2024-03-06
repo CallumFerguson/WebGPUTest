@@ -1,5 +1,5 @@
 struct UniformData {
-    model: mat4x4f,
+    position: vec3f,
     velocity: vec3f,
 }
 
@@ -34,10 +34,10 @@ fn vert(i: VertexInput) -> VertexOutput {
 
     var o: VertexOutput;
 
-    var worldOrigin = uniformData.model * vec4(0, 0, 0, 1);
-    var viewOrigin = cameraData.view * uniformData.model * vec4(0, 0, 0, 1);
+    var worldOrigin = vec4(uniformData.position, 1);
+    var viewOrigin = cameraData.view * worldOrigin;
 
-    var worldPos = uniformData.model * i.position;
+    var worldPos = vec4(uniformData.position + i.position.xyz * 0.01, 1);
 
     var viewPos = worldPos - worldOrigin + viewOrigin;
 
@@ -45,7 +45,7 @@ fn vert(i: VertexInput) -> VertexOutput {
 
     o.position = clipPos;
 
-    o.normal = normalize((uniformData.model * vec4(i.normal, 0.0)).xyz);
+//    o.normal = normalize((uniformData.model * vec4(i.normal, 0.0)).xyz);
     o.uv = i.uv;
     o.instanceIndex = i.instanceIndex;
     return o;
@@ -55,9 +55,12 @@ fn vert(i: VertexInput) -> VertexOutput {
 fn frag(i: VertexOutput) -> @location(0) vec4f {
 //    var light = min(max(dot(normalize(i.normal), normalize(vec3(-0.5, 0.5, 0.5))), 0) + 0.15, 1);
 //    var lightColor = vec3(light, light, light);
+
     var diffuseColor = textureSample(texture, textureSampler, i.uv);
+    return vec4(diffuseColor.rgb * vec3(0, 0.5, 1), diffuseColor.a);
+
 //    return vec4(diffuseColor * lightColor, 1); // * ua[i.instanceIndex].color
 
 //    return vec4(diffuseColor.rgb, 0.5);
-    return vec4(diffuseColor.rgb * vec3(0, 0.5, 1), diffuseColor.a);
+//    return vec4(1, 0, 0, 1);
 }
