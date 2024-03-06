@@ -1,3 +1,5 @@
+import { vec3 } from "gl-matrix";
+
 export async function getDevice(): Promise<{ gpu: GPU; device: GPUDevice }> {
   const gpu = navigator.gpu;
   if (!gpu) {
@@ -111,4 +113,20 @@ export async function loadModel(fileName: string): Promise<{
   const textureURI = `data:image/${textureJson.formathint};base64,${textureJson.data}`;
 
   return { vertices, normals, uvs, textureURI, indices };
+}
+
+export function randomDirection(magnitude: number = 1): vec3 {
+  const theta = Math.random() * 2 * Math.PI;
+  const phi = Math.random() * Math.PI;
+
+  const x = Math.sin(phi) * Math.cos(theta);
+  const y = Math.sin(phi) * Math.sin(theta);
+  const z = Math.cos(phi);
+
+  let randomVec3 = vec3.fromValues(x, y, z);
+
+  vec3.normalize(randomVec3, randomVec3);
+  vec3.scale(randomVec3, randomVec3, magnitude);
+
+  return randomVec3;
 }

@@ -6,7 +6,7 @@ import {
   createTextureFromImage,
 } from "webgpu-utils";
 import { mat4, vec3, quat } from "gl-matrix";
-import { createBuffer, getDevice } from "./utility";
+import { createBuffer, getDevice, randomDirection } from "./utility";
 
 async function main() {
   const { gpu, device } = await getDevice();
@@ -180,11 +180,7 @@ async function main() {
     );
     objectInfos.push({
       model: model,
-      velocity: vec3.fromValues(
-        (Math.random() - 0.5) / 5,
-        (Math.random() - 0.5) / 5,
-        (Math.random() - 0.5) / 5
-      ),
+      velocity: randomDirection(Math.random() * 0.2 - 0.1),
       angularVelocity: vec3.fromValues(
         (Math.random() - 0.5) * 5,
         (Math.random() - 0.5) * 5,
