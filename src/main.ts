@@ -5,121 +5,10 @@ import {
   createTextureFromImage,
 } from "webgpu-utils";
 import { mat4, vec3, quat } from "gl-matrix";
-
-function createBuffer(
-  device: GPUDevice,
-  data: any, // TypedArray or ArrayBuffer
-  usage: GPUBufferUsageFlags
-) {
-  const buffer = device.createBuffer({
-    size: data.byteLength,
-    usage,
-    mappedAtCreation: true,
-  });
-
-  const mappedRange = buffer.getMappedRange();
-
-  if (data instanceof ArrayBuffer) {
-    const view = new Uint8Array(mappedRange);
-    view.set(new Uint8Array(data));
-  } else {
-    const dst = new data.constructor(mappedRange);
-    dst.set(data);
-  }
-
-  buffer.unmap();
-  return buffer;
-}
-
-async function loadModel(fileName: string): Promise<{
-  vertices: Float32Array;
-  normals: Float32Array;
-  uvs: Float32Array;
-  textureURI: string;
-  indices: Uint32Array;
-}> {
-  // @ts-ignore
-  const ajs: any = await assimpjs();
-
-  // fetch the files to import
-  let files = [fileName];
-
-  const resultJson: any = await new Promise((resolve, reject) => {
-    Promise.all(files.map((file) => fetch(file)))
-      .then((responses) => {
-        return Promise.all(responses.map((res) => res.arrayBuffer()));
-      })
-      .then((arrayBuffers) => {
-        // create new file list object, and add the files
-        let fileList = new ajs.FileList();
-        for (let i = 0; i < files.length; i++) {
-          fileList.AddFile(files[i], new Uint8Array(arrayBuffers[i]));
-        }
-
-        // convert file list to assimp json
-        let result = ajs.ConvertFileList(fileList, "assjson");
-
-        // check if the conversion succeeded
-        if (!result.IsSuccess() || result.FileCount() == 0) {
-          console.log(result.GetErrorCode());
-          reject(result.GetErrorCode());
-          return;
-        }
-
-        // get the result file, and convert to string
-        let resultFile = result.GetFile(0);
-        let jsonContent = new TextDecoder().decode(resultFile.GetContent());
-
-        // parse the result json
-        let resultJson = JSON.parse(jsonContent);
-        resolve(resultJson);
-      });
-  });
-
-  let mesh = resultJson.meshes[0];
-
-  const vertices = Float32Array.from(mesh.vertices);
-  const normals = Float32Array.from(mesh.normals);
-  if (mesh.texturecoords.length < 1) {
-    console.log("texture missing texurecoords");
-  }
-  if (mesh.texturecoords.length > 1) {
-    console.log("texture has multiple sets of texturecoords");
-    console.log(mesh.texturecoords);
-  }
-  const uvs = Float32Array.from(mesh.texturecoords[0]);
-  const indices = Uint32Array.from(mesh.faces.flat());
-
-  const textureJson = resultJson.textures[0];
-  const textureURI = `data:image/${textureJson.formathint};base64,${textureJson.data}`;
-  // const textureURI = `data:image/png;base64, iVBORw0KGgoAAAANSUhEUgAAAAUA
-  //   AAAFCAYAAACNbyblAAAAHElEQVQI12P4//8/w38GIAXDIBKE0DHxgljNBAAO
-  //       9TXL0Y4OHwAAAABJRU5ErkJggg==`;
-
-  return { vertices, normals, uvs, textureURI, indices };
-}
+import { createBuffer, getDevice } from "./utility";
 
 async function main() {
-  const gpu = navigator.gpu;
-  if (!gpu) {
-    console.log("browser does not support WebGPU");
-    alert("browser does not support WebGPU");
-    return;
-  }
-  const adapter = await gpu?.requestAdapter({
-    powerPreference: "high-performance",
-  });
-  if (!adapter) {
-    console.log("browser does not support WebGPU");
-    alert("browser does not support WebGPU");
-    return;
-  }
-  const device = await adapter.requestDevice();
-  if (!device) {
-    console.log("browser does not support WebGPU");
-    alert("browser does not support WebGPU");
-    return;
-  }
+  const { gpu, device } = await getDevice();
 
   const canvas = document.querySelector("canvas") as HTMLCanvasElement;
   if (canvas === null) {
@@ -137,7 +26,7 @@ async function main() {
   context.configure({
     device,
     format: presentationFormat,
-    alphaMode: "premultiplied",
+    alphaMode: "opaque",
   });
 
   // let { vertices, normals, uvs, textureURI, indices } = await loadModel(
