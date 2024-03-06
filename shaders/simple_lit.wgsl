@@ -37,7 +37,7 @@ fn vert(i: VertexInput) -> VertexOutput {
     var worldOrigin = vec4(uniformData.position, 1);
     var viewOrigin = cameraData.view * worldOrigin;
 
-    var worldPos = vec4(uniformData.position + i.position.xyz * 0.01, 1);
+    var worldPos = vec4(uniformData.position + i.position.xyz * 0.001, 1);
 
     var viewPos = worldPos - worldOrigin + viewOrigin;
 
