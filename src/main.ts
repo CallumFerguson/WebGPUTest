@@ -1,4 +1,5 @@
 import simpleLitShaderString from "../shaders/simple_lit.wgsl?raw";
+import computeShaderString from "../shaders/compute.wgsl?raw";
 import {
   makeShaderDataDefinitions,
   makeStructuredView,
@@ -165,7 +166,7 @@ async function main() {
   };
   const pipeline = device.createRenderPipeline(pipelineDescriptor);
 
-  const numObjects = 5000; // 500000
+  const numObjects = 50000; // 500000
   const objectInfos: { model: mat4; velocity: vec3; angularVelocity: vec3 }[] =
     [];
   const size = 0.01;
@@ -200,11 +201,24 @@ async function main() {
     defs.storages.uniformData,
     new ArrayBuffer(uniformDataByteLength * objectInfos.length)
   );
+  uniformData.set(
+    objectInfos.map((objectInfo) => {
+      return { model: objectInfo.model, velocity: objectInfo.velocity };
+    })
+  );
 
   const storageBuffer = device.createBuffer({
     size: uniformData.arrayBuffer.byteLength,
-    usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
+    usage:
+      GPUBufferUsage.STORAGE |
+      GPUBufferUsage.COPY_DST |
+      GPUBufferUsage.COPY_SRC,
   });
+  device.queue.writeBuffer(storageBuffer, 0, uniformData.arrayBuffer);
+  // const storageResultBuffer = device.createBuffer({
+  //   size: uniformData.arrayBuffer.byteLength,
+  //   usage: GPUBufferUsage.MAP_READ | GPUBufferUsage.COPY_DST,
+  // });
 
   const cameraData = makeStructuredView(defs.uniforms.cameraData);
   const cameraDataBuffer = device.createBuffer({
@@ -240,6 +254,37 @@ async function main() {
       depthStoreOp: "store",
     },
   };
+
+  const computeShaderModule = device.createShaderModule({
+    code: computeShaderString,
+  });
+
+  const computeBindGroupLayoutGroup0 = device.createBindGroupLayout({
+    entries: [
+      {
+        binding: 0,
+        visibility: GPUShaderStage.COMPUTE,
+        buffer: { type: "storage" },
+      },
+    ],
+  });
+
+  const computePipelineLayout = device.createPipelineLayout({
+    bindGroupLayouts: [computeBindGroupLayoutGroup0],
+  });
+
+  const computePipeline = device.createComputePipeline({
+    layout: computePipelineLayout,
+    compute: {
+      module: computeShaderModule,
+      entryPoint: "computeSomething",
+    },
+  });
+
+  const computeBindGroup0 = device.createBindGroup({
+    layout: computeBindGroupLayoutGroup0,
+    entries: [{ binding: 0, resource: { buffer: storageBuffer } }],
+  });
 
   let depthTexture: GPUTexture | undefined = undefined;
   setUpNewDepthTexture();
@@ -314,11 +359,11 @@ async function main() {
   }
 
   let previousTime = 0;
-  function render(currentTime: number) {
+  async function render(currentTime: number) {
     currentTime *= 0.001;
     const deltaTime = currentTime - previousTime;
 
-    // console.log(1 / deltaTime);
+    console.log(1 / deltaTime);
 
     handleCanvasResize();
 
@@ -346,31 +391,36 @@ async function main() {
     });
     device.queue.writeBuffer(cameraDataBuffer, 0, cameraData.arrayBuffer);
 
-    for (let i = 0; i < objectInfos.length; i++) {
-      const objectInfo = objectInfos[i];
+    // for (let i = 0; i < objectInfos.length; i++) {
+    //   const objectInfo = objectInfos[i];
+    //
+    //   const step = vec3.create();
+    //   vec3.copy(step, objectInfo.velocity);
+    //   vec3.scale(step, step, deltaTime / size);
+    //   mat4.translate(objectInfo.model, objectInfo.model, step);
+    //
+    //   // if (i === 0) {
+    //   //   console.log(objectInfo.model);
+    //   // }
+    //
+    //   // mat4.rotate(
+    //   //   objectInfo.model,
+    //   //   objectInfo.model,
+    //   //   vec3.length(objectInfo.angularVelocity) * deltaTime,
+    //   //   objectInfo.angularVelocity
+    //   // );
+    // }
+    //
+    // uniformData.set(
+    //   objectInfos.map((objectInfo) => {
+    //     return { model: objectInfo.model };
+    //   })
+    // );
 
-      const step = vec3.create();
-      vec3.copy(step, objectInfo.velocity);
-      vec3.scale(step, step, deltaTime / size);
-      mat4.translate(objectInfo.model, objectInfo.model, step);
-
-      // mat4.rotate(
-      //   objectInfo.model,
-      //   objectInfo.model,
-      //   vec3.length(objectInfo.angularVelocity) * deltaTime,
-      //   objectInfo.angularVelocity
-      // );
-    }
-
-    uniformData.set(
-      objectInfos.map((objectInfo) => {
-        return { model: objectInfo.model };
-      })
-    );
-
-    device.queue.writeBuffer(storageBuffer, 0, uniformData.arrayBuffer);
+    // device.queue.writeBuffer(storageBuffer, 0, uniformData.arrayBuffer);
 
     const commandEncoder = device.createCommandEncoder();
+
     const passEncoder = commandEncoder.beginRenderPass(
       renderPassDescriptor as GPURenderPassDescriptor
     );
@@ -403,7 +453,28 @@ async function main() {
     passEncoder.drawIndexed(indices.length, numObjects);
 
     passEncoder.end();
+
+    const computePassEncoder = commandEncoder.beginComputePass();
+
+    computePassEncoder.setPipeline(computePipeline);
+    computePassEncoder.setBindGroup(0, computeBindGroup0);
+    computePassEncoder.dispatchWorkgroups(objectInfos.length);
+    computePassEncoder.end();
+
+    // commandEncoder.copyBufferToBuffer(
+    //   storageBuffer,
+    //   0,
+    //   storageResultBuffer,
+    //   0,
+    //   storageResultBuffer.size
+    // );
+
     device.queue.submit([commandEncoder.finish()]);
+
+    // await storageResultBuffer.mapAsync(GPUMapMode.READ);
+    // const result = new Float32Array(storageResultBuffer.getMappedRange());
+    // console.log(result.slice(0, 16));
+    // storageResultBuffer.unmap();
 
     previousTime = currentTime;
     requestAnimationFrame(render);

@@ -1,5 +1,6 @@
 struct UniformData {
     model: mat4x4f,
+    velocity: vec3f,
 }
 
 struct CameraData {
