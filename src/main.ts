@@ -57,7 +57,6 @@ async function main() {
   const numObjects = 8000000; // 8000000
   const particleRenderer = new ParticleRender(
     device,
-    context,
     presentationFormat,
     cameraDataBuffer,
     numObjects
@@ -96,6 +95,16 @@ async function main() {
     calculateProjection();
   }
 
+  const renderPassDescriptor: unknown = {
+    colorAttachments: [
+      {
+        clearValue: { r: 0.0, g: 0.0, b: 0.0, a: 1.0 },
+        loadOp: "clear",
+        storeOp: "store",
+      },
+    ],
+  };
+
   let previousTime = 0;
   async function render(currentTime: number) {
     currentTime *= 0.001;
@@ -118,8 +127,24 @@ async function main() {
 
     const commandEncoder = device.createCommandEncoder();
 
-    particleRenderer.render(commandEncoder);
-    particleComputer.render(commandEncoder);
+    // @ts-ignore
+    renderPassDescriptor.colorAttachments[0].view = context
+      .getCurrentTexture()
+      .createView();
+
+    const renderPassEncoder = commandEncoder.beginRenderPass(
+      renderPassDescriptor as GPURenderPassDescriptor
+    );
+
+    particleRenderer.render(renderPassEncoder);
+
+    renderPassEncoder.end();
+
+    const computePassEncoder = commandEncoder.beginComputePass();
+
+    particleComputer.render(computePassEncoder);
+
+    computePassEncoder.end();
 
     device.queue.submit([commandEncoder.finish()]);
 

@@ -2,11 +2,10 @@ import pointParticleShaderString from "../shaders/pointParticle.wgsl?raw";
 
 export class ParticleRender {
   positionsBuffer: GPUBuffer;
-  render: (commandEncoder: GPUCommandEncoder) => void;
+  render: (renderPassEncoder: GPURenderPassEncoder) => void;
 
   constructor(
     device: GPUDevice,
-    context: GPUCanvasContext,
     presentationFormat: GPUTextureFormat,
     cameraDataBuffer: GPUBuffer,
     numObjects: number
@@ -105,31 +104,11 @@ export class ParticleRender {
       entries: [{ binding: 0, resource: { buffer: this.positionsBuffer } }],
     });
 
-    const renderPassDescriptor: unknown = {
-      colorAttachments: [
-        {
-          clearValue: { r: 0.0, g: 0.0, b: 0.0, a: 1.0 },
-          loadOp: "clear",
-          storeOp: "store",
-        },
-      ],
-    };
-
-    this.render = (commandEncoder: GPUCommandEncoder) => {
-      // @ts-ignore
-      renderPassDescriptor.colorAttachments[0].view = context
-        .getCurrentTexture()
-        .createView();
-
-      const passEncoder = commandEncoder.beginRenderPass(
-        renderPassDescriptor as GPURenderPassDescriptor
-      );
-
-      passEncoder.setPipeline(pipeline);
-      passEncoder.setBindGroup(0, bindGroup0);
-      passEncoder.setBindGroup(1, bindGroup1);
-      passEncoder.draw(numObjects);
-      passEncoder.end();
+    this.render = (renderPassEncoder: GPURenderPassEncoder) => {
+      renderPassEncoder.setPipeline(pipeline);
+      renderPassEncoder.setBindGroup(0, bindGroup0);
+      renderPassEncoder.setBindGroup(1, bindGroup1);
+      renderPassEncoder.draw(numObjects);
     };
   }
 }
