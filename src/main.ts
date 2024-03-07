@@ -137,8 +137,8 @@ async function main() {
     positionsArrayBufferView[i * 4 + 1] = 0.5 + Math.random() * 0.1;
     positionsArrayBufferView[i * 4 + 2] = -1;
 
-    velocitiesArrayBufferView[i * 4] = 1.5 + Math.random() * 0.2 - 0.1;
-    velocitiesArrayBufferView[i * 4 + 1] = Math.random() * 0.4 - 0.2;
+    velocitiesArrayBufferView[i * 4] = (1.5 + Math.random() * 1.4 - 0.7) * 2;
+    velocitiesArrayBufferView[i * 4 + 1] = (Math.random() * 0.4 - 0.2) * 2;
     velocitiesArrayBufferView[i * 4 + 2] = 0;
   }
 
@@ -321,7 +321,7 @@ async function main() {
     const deltaTime = currentTime - previousTime;
 
     timeData.set({
-      deltaTime: Math.min(deltaTime, 0.1),
+      deltaTime: Math.min(deltaTime, 0.01),
     });
     device.queue.writeBuffer(timeBuffer, 0, timeData.arrayBuffer);
 
