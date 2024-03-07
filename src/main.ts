@@ -29,11 +29,29 @@ async function main() {
     alphaMode: "opaque",
   });
 
-  let view = mat4.create();
+  let cameraParentModel = mat4.create();
+  let cameraParentRotation = quat.create();
+  let cameraParentPosition = vec3.fromValues(0, 0, -1);
+
+  let cameraModel = mat4.create();
   let cameraRotation = quat.create();
-  let cameraPosition = vec3.fromValues(0, 0, 0);
-  mat4.fromRotationTranslation(view, cameraRotation, cameraPosition);
-  mat4.invert(view, view);
+  let cameraPosition = vec3.fromValues(0, 0, 1);
+
+  let view = mat4.create();
+  calculateView();
+
+  function calculateView() {
+    mat4.fromRotationTranslation(
+      cameraParentModel,
+      cameraParentRotation,
+      cameraParentPosition
+    );
+
+    mat4.fromRotationTranslation(cameraModel, cameraRotation, cameraPosition);
+    mat4.mul(cameraModel, cameraParentModel, cameraModel);
+
+    mat4.invert(view, cameraModel);
+  }
 
   let projection = mat4.create();
   function calculateProjection() {
@@ -108,14 +126,65 @@ async function main() {
     ],
   };
 
+  let mouseX = 0;
+  let mouseY = 0;
+  let lastMouseX = 0;
+  let lastMouseY = 0;
+  document.addEventListener("mousemove", (event) => {
+    mouseX = event.clientX;
+    mouseY = event.clientY;
+  });
+
+  let mouseDown = false;
+  document.addEventListener("mousedown", () => {
+    mouseDown = true;
+  });
+
+  document.addEventListener("mouseup", () => {
+    mouseDown = false;
+  });
+
+  document.addEventListener("wheel", (event) => {
+    const sensitivity = 1.5;
+    const minDist = 0.1;
+    const maxDist = 25;
+    cameraPosition[2] = Math.min(
+      Math.max(
+        minDist,
+        cameraPosition[2] * (1 + event.deltaY / (500 / sensitivity))
+      ),
+      maxDist
+    );
+    calculateView();
+  });
+
   let previousTime = 0;
   async function render(currentTime: number) {
     currentTime *= 0.001;
     const deltaTime = currentTime - previousTime;
+    let mouseDeltaX = lastMouseX - mouseX;
+    let mouseDeltaY = lastMouseY - mouseY;
 
     // console.log(1 / deltaTime);
 
     handleCanvasResize();
+
+    if (mouseDown && (mouseDeltaX !== 0 || mouseDeltaY !== 0)) {
+      const sensitivity = 0.5;
+      quat.rotateY(
+        cameraParentRotation,
+        cameraParentRotation,
+        (Math.PI / 180) * mouseDeltaX * sensitivity
+      );
+
+      quat.rotateX(
+        cameraParentRotation,
+        cameraParentRotation,
+        (Math.PI / 180) * mouseDeltaY * sensitivity
+      );
+
+      calculateView();
+    }
 
     timeData.set({
       deltaTime: Math.min(deltaTime, 0.01),
@@ -156,6 +225,8 @@ async function main() {
     device.queue.submit([commandEncoder.finish()]);
 
     previousTime = currentTime;
+    lastMouseX = mouseX;
+    lastMouseY = mouseY;
     requestAnimationFrame(render);
   }
   requestAnimationFrame(render);
