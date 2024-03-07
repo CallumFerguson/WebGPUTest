@@ -2,7 +2,7 @@ import computeShaderString from "../shaders/compute.wgsl?raw";
 
 export class ParticleComputer {
   positionsBuffer: GPUBuffer;
-  render: (computePassEncoder: GPUComputePassEncoder) => void;
+  compute: (computePassEncoder: GPUComputePassEncoder) => void;
 
   constructor(
     device: GPUDevice,
@@ -85,7 +85,7 @@ export class ParticleComputer {
       ],
     });
 
-    this.render = (computePassEncoder: GPUComputePassEncoder) => {
+    this.compute = (computePassEncoder: GPUComputePassEncoder) => {
       computePassEncoder.setPipeline(computePipeline);
       computePassEncoder.setBindGroup(0, computeBindGroup0);
       computePassEncoder.setBindGroup(1, computeBindGroup1);

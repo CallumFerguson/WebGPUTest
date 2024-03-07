@@ -113,7 +113,7 @@ async function main() {
     currentTime *= 0.001;
     const deltaTime = currentTime - previousTime;
 
-    // console.log(1 / deltaTime);
+    console.log(1 / deltaTime);
 
     handleCanvasResize();
 
@@ -146,7 +146,10 @@ async function main() {
 
     const computePassEncoder = commandEncoder.beginComputePass();
 
-    particleComputer.render(computePassEncoder);
+    const computeStepsPerFrame = 2;
+    for (let i = 0; i < computeStepsPerFrame; i++) {
+      particleComputer.compute(computePassEncoder);
+    }
 
     computePassEncoder.end();
 
