@@ -24,7 +24,7 @@ export class ParticleRender {
 
       positionsArrayBufferView[i * 4] = Math.random() * 0.1 - 0.05;
       positionsArrayBufferView[i * 4 + 1] = 0.5 + Math.random() * 0.1;
-      positionsArrayBufferView[i * 4 + 2] = -1;
+      positionsArrayBufferView[i * 4 + 2] = -1 + Math.random() - 0.5;
     }
     device.queue.writeBuffer(this.positionsBuffer, 0, positionsArrayBuffer);
 

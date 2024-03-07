@@ -22,7 +22,7 @@ export class ParticleComputer {
     for (let i = 0; i < numObjects; i++) {
       // randomDirection(velocity, Math.random() * 0.25);
 
-      velocitiesArrayBufferView[i * 4] = (1.5 + Math.random() * 1.4 - 0.7) * 2;
+      velocitiesArrayBufferView[i * 4] = (0.65 + Math.random() * 0.4) * 2;
       velocitiesArrayBufferView[i * 4 + 1] = (Math.random() * 0.4 - 0.2) * 2;
       velocitiesArrayBufferView[i * 4 + 2] = 0;
     }
