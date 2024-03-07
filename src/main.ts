@@ -5,6 +5,7 @@ import { getDevice } from "./utility";
 import { ParticleRender } from "./ParticleRender";
 import { ParticleComputer } from "./ParticleComputer";
 import { makeShaderDataDefinitions, makeStructuredView } from "webgpu-utils";
+import { BackgroundRenderer } from "./BackgroundRenderer";
 
 async function main() {
   const { gpu, device } = await getDevice();
@@ -67,6 +68,8 @@ async function main() {
     timeBuffer,
     numObjects
   );
+
+  const backgroundRenderer = new BackgroundRenderer(device, presentationFormat);
 
   function resizeCanvasIfNeeded(): boolean {
     const width = Math.max(
@@ -136,6 +139,7 @@ async function main() {
       renderPassDescriptor as GPURenderPassDescriptor
     );
 
+    backgroundRenderer.render(renderPassEncoder);
     particleRenderer.render(renderPassEncoder);
 
     renderPassEncoder.end();
