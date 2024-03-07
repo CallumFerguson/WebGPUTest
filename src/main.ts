@@ -113,7 +113,7 @@ async function main() {
     currentTime *= 0.001;
     const deltaTime = currentTime - previousTime;
 
-    console.log(1 / deltaTime);
+    // console.log(1 / deltaTime);
 
     handleCanvasResize();
 
