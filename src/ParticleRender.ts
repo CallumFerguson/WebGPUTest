@@ -73,12 +73,12 @@ export class ParticleRender {
               color: {
                 operation: "add",
                 srcFactor: "one",
-                dstFactor: "one-minus-src-alpha",
+                dstFactor: "one",
               },
               alpha: {
-                operation: "add",
+                operation: "max",
                 srcFactor: "one",
-                dstFactor: "one-minus-src-alpha",
+                dstFactor: "one",
               },
             },
           },
