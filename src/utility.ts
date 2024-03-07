@@ -132,3 +132,7 @@ export function randomDirection(randomVec3: vec3, magnitude: number = 1): vec3 {
 
   return randomVec3;
 }
+
+export function clamp(value: number, min: number, max: number) {
+  return Math.min(Math.max(value, min), max);
+}

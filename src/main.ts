@@ -1,7 +1,7 @@
 import pointParticleShaderString from "../shaders/pointParticle.wgsl?raw";
 import computeShaderString from "../shaders/compute.wgsl?raw";
 import { mat4, vec3, quat } from "gl-matrix";
-import { getDevice } from "./utility";
+import { clamp, getDevice } from "./utility";
 import { ParticleRender } from "./ParticleRender";
 import { ParticleComputer } from "./ParticleComputer";
 import { makeShaderDataDefinitions, makeStructuredView } from "webgpu-utils";
@@ -29,9 +29,14 @@ async function main() {
     alphaMode: "opaque",
   });
 
-  let cameraParentModel = mat4.create();
-  let cameraParentRotation = quat.create();
-  let cameraParentPosition = vec3.fromValues(0, 0, -1);
+  let cameraParentXModel = mat4.create();
+  let cameraParentXRotation = quat.create();
+  let cameraParentXPosition = vec3.fromValues(0, 0, -1);
+
+  let cameraParentYEuler = 0;
+  let cameraParentYModel = mat4.create();
+  let cameraParentYRotation = quat.create();
+  let cameraParentYPosition = vec3.fromValues(0, 0, 0);
 
   let cameraModel = mat4.create();
   let cameraRotation = quat.create();
@@ -42,13 +47,21 @@ async function main() {
 
   function calculateView() {
     mat4.fromRotationTranslation(
-      cameraParentModel,
-      cameraParentRotation,
-      cameraParentPosition
+      cameraParentXModel,
+      cameraParentXRotation,
+      cameraParentXPosition
+    );
+
+    mat4.fromRotationTranslation(
+      cameraParentYModel,
+      cameraParentYRotation,
+      cameraParentYPosition
     );
 
     mat4.fromRotationTranslation(cameraModel, cameraRotation, cameraPosition);
-    mat4.mul(cameraModel, cameraParentModel, cameraModel);
+
+    mat4.mul(cameraModel, cameraParentYModel, cameraModel);
+    mat4.mul(cameraModel, cameraParentXModel, cameraModel);
 
     mat4.invert(view, cameraModel);
   }
@@ -148,11 +161,9 @@ async function main() {
     const sensitivity = 1.5;
     const minDist = 0.1;
     const maxDist = 25;
-    cameraPosition[2] = Math.min(
-      Math.max(
-        minDist,
-        cameraPosition[2] * (1 + event.deltaY / (500 / sensitivity))
-      ),
+    cameraPosition[2] = clamp(
+      cameraPosition[2] * (1 + event.deltaY / (500 / sensitivity)),
+      minDist,
       maxDist
     );
     calculateView();
@@ -172,16 +183,17 @@ async function main() {
     if (mouseDown && (mouseDeltaX !== 0 || mouseDeltaY !== 0)) {
       const sensitivity = 0.5;
       quat.rotateY(
-        cameraParentRotation,
-        cameraParentRotation,
+        cameraParentXRotation,
+        cameraParentXRotation,
         (Math.PI / 180) * mouseDeltaX * sensitivity
       );
 
-      quat.rotateX(
-        cameraParentRotation,
-        cameraParentRotation,
-        (Math.PI / 180) * mouseDeltaY * sensitivity
+      cameraParentYEuler = clamp(
+        cameraParentYEuler + mouseDeltaY * sensitivity,
+        -89.9,
+        89.9
       );
+      quat.fromEuler(cameraParentYRotation, cameraParentYEuler, 0, 0);
 
       calculateView();
     }
