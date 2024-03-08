@@ -1,10 +1,10 @@
-import fullscreenQuadShaderString from "../shaders/fullscreenQuad.wgsl?raw";
+import fullscreenColorShaderString from "../shaders/fullscreenColor.wgsl?raw";
 
 export class BackgroundRenderer {
   render: (renderPassEncoder: GPURenderPassEncoder) => void;
   constructor(device: GPUDevice, presentationFormat: GPUTextureFormat) {
     const shaderModule = device.createShaderModule({
-      code: fullscreenQuadShaderString,
+      code: fullscreenColorShaderString,
     });
 
     const pipelineLayout = device.createPipelineLayout({

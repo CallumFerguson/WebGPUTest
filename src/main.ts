@@ -6,6 +6,7 @@ import { ParticleRender } from "./ParticleRender";
 import { ParticleComputer } from "./ParticleComputer";
 import { makeShaderDataDefinitions, makeStructuredView } from "webgpu-utils";
 import { BackgroundRenderer } from "./BackgroundRenderer";
+import { FullscreenTextureRenderer } from "./FullscreenTextureRenderer";
 
 async function main() {
   const { gpu, device } = await getDevice();
@@ -91,7 +92,9 @@ async function main() {
     device,
     presentationFormat,
     cameraDataBuffer,
-    numObjects
+    numObjects,
+    canvas.width,
+    canvas.height
   );
   const particleComputer = new ParticleComputer(
     device,
@@ -101,6 +104,11 @@ async function main() {
   );
 
   const backgroundRenderer = new BackgroundRenderer(device, presentationFormat);
+  const fullscreenTextureRenderer = new FullscreenTextureRenderer(
+    device,
+    presentationFormat,
+    particleRenderer.textureView
+  );
 
   function resizeCanvasIfNeeded(): boolean {
     const width = Math.max(
@@ -125,6 +133,9 @@ async function main() {
     if (!resized) {
       return;
     }
+
+    particleRenderer.resize(canvas.width, canvas.height);
+    fullscreenTextureRenderer.resize(particleRenderer.textureView);
 
     calculateProjection();
   }
@@ -216,12 +227,14 @@ async function main() {
       .getCurrentTexture()
       .createView();
 
+    particleRenderer.renderPass(commandEncoder);
+
     const renderPassEncoder = commandEncoder.beginRenderPass(
       renderPassDescriptor as GPURenderPassDescriptor
     );
 
     backgroundRenderer.render(renderPassEncoder);
-    particleRenderer.render(renderPassEncoder);
+    fullscreenTextureRenderer.render(renderPassEncoder);
 
     renderPassEncoder.end();
 

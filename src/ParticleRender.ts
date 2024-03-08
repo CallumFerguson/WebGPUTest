@@ -2,13 +2,18 @@ import pointParticleShaderString from "../shaders/pointParticle.wgsl?raw";
 
 export class ParticleRender {
   positionsBuffer: GPUBuffer;
-  render: (renderPassEncoder: GPURenderPassEncoder) => void;
+  textureView: GPUTextureView;
+
+  renderPass: (commandEncoder: GPUCommandEncoder) => void;
+  resize: (canvasWidth: number, canvasHeight: number) => void;
 
   constructor(
     device: GPUDevice,
     presentationFormat: GPUTextureFormat,
     cameraDataBuffer: GPUBuffer,
-    numObjects: number
+    numObjects: number,
+    canvasWidth: number,
+    canvasHeight: number
   ) {
     const positionsArrayBuffer = new ArrayBuffer(numObjects * 16);
     const positionsArrayBufferView = new Float32Array(positionsArrayBuffer);
@@ -104,11 +109,50 @@ export class ParticleRender {
       entries: [{ binding: 0, resource: { buffer: this.positionsBuffer } }],
     });
 
-    this.render = (renderPassEncoder: GPURenderPassEncoder) => {
+    let renderTexture = device.createTexture({
+      size: [canvasWidth, canvasHeight],
+      format: presentationFormat,
+      usage:
+        GPUTextureUsage.RENDER_ATTACHMENT | GPUTextureUsage.TEXTURE_BINDING,
+    });
+
+    this.textureView = renderTexture.createView();
+
+    const renderPassDescriptor: GPURenderPassDescriptor = {
+      colorAttachments: [
+        {
+          view: this.textureView,
+          clearValue: { r: 0.0, g: 0.0, b: 0.0, a: 1.0 },
+          loadOp: "clear",
+          storeOp: "store",
+        },
+      ],
+    };
+
+    this.resize = (canvasWidth: number, canvasHeight: number) => {
+      renderTexture.destroy();
+      renderTexture = device.createTexture({
+        size: [canvasWidth, canvasHeight],
+        format: presentationFormat,
+        usage:
+          GPUTextureUsage.RENDER_ATTACHMENT | GPUTextureUsage.TEXTURE_BINDING,
+      });
+      this.textureView = renderTexture.createView();
+      // @ts-ignore
+      renderPassDescriptor.colorAttachments[0].view = this.textureView;
+    };
+
+    this.renderPass = (commandEncoder: GPUCommandEncoder) => {
+      const renderPassEncoder = commandEncoder.beginRenderPass(
+        renderPassDescriptor as GPURenderPassDescriptor
+      );
+
       renderPassEncoder.setPipeline(pipeline);
       renderPassEncoder.setBindGroup(0, bindGroup0);
       renderPassEncoder.setBindGroup(1, bindGroup1);
       renderPassEncoder.draw(numObjects);
+
+      renderPassEncoder.end();
     };
   }
 }
