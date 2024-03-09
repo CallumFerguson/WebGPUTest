@@ -1,7 +1,7 @@
 struct CameraData {
     view: mat4x4f,
     projection: mat4x4f,
-//    screenHeight
+    canvasHeight: f32,
 }
 
 @group(0) @binding(0) var<uniform> cameraData: CameraData;
@@ -26,13 +26,12 @@ fn vert(i: VertexInput) -> VertexOutput {
     o.position = cameraData.projection * viewPosition;
 
     var distance = length(viewPosition);
-    o.brightness = (1 / (distance * distance)) * 10;
+    o.brightness = (1 / (distance * distance)) * (cameraData.canvasHeight / 100);
 
     return o;
 }
 
 @fragment
-fn frag(i: VertexOutput) -> @location(0) vec4f {
-//    return vec4(vec3(0.1, 0.025, 0.005) * 1, 1);
-    return vec4(i.brightness, 0, 0, 1);
+fn frag(i: VertexOutput) -> @location(0) f32 {
+    return i.brightness;
 }

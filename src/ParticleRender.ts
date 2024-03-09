@@ -60,7 +60,7 @@ export class ParticleRender {
       bindGroupLayouts: [bindGroupLayoutGroup0, bindGroupLayoutGroup1],
     });
 
-    const textureFormat: GPUTextureFormat = "rgba16float"; // presentationFormat / rgba16float
+    const textureFormat: GPUTextureFormat = "r16float";
     const pipelineDescriptor: GPURenderPipelineDescriptor = {
       layout: pipelineLayout,
       vertex: {

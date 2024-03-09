@@ -216,6 +216,7 @@ async function main() {
     cameraData.set({
       view: view,
       projection: projection,
+      canvasHeight: canvas.height,
     });
     device.queue.writeBuffer(cameraDataBuffer, 0, cameraData.arrayBuffer);
 
