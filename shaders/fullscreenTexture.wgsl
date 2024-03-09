@@ -33,8 +33,8 @@ fn vert(i: VertexInput) -> VertexOutput {
 
 @fragment
 fn frag(i: VertexOutput) -> @location(0) vec4f {
-    var texel = textureSample(texture, textureSampler, i.uv);
-    return brightnessToColor(texel.r);
+    var brightness = textureSample(texture, textureSampler, i.uv).r;
+    return brightnessToColor(brightness);
 }
 
 fn brightnessToColor(brightness: f32) -> vec4<f32> {
