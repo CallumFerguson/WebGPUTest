@@ -25,7 +25,7 @@ fn vert(i: VertexInput) -> VertexOutput {
     o.position = cameraData.projection * viewPosition;
 
     var distance = length(viewPosition);
-    o.brightness = (1 / (distance * distance)) * (881 / 100) * 4;
+    o.brightness = (1 / (distance * distance)) * (881 / 100) * 4 * 2;
 
     return o;
 }
