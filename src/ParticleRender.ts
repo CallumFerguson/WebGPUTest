@@ -113,7 +113,6 @@ export class ParticleRender {
       Math.min(device.limits.maxTextureDimension2D, canvasWidth * 2),
       Math.min(device.limits.maxTextureDimension2D, canvasHeight * 2),
     ];
-
     let renderTexture = device.createTexture({
       size: textureSize,
       format: textureFormat,
@@ -136,6 +135,11 @@ export class ParticleRender {
 
     this.resize = (canvasWidth: number, canvasHeight: number) => {
       renderTexture.destroy();
+
+      let textureSize = [
+        Math.min(device.limits.maxTextureDimension2D, canvasWidth * 2),
+        Math.min(device.limits.maxTextureDimension2D, canvasHeight * 2),
+      ];
       renderTexture = device.createTexture({
         size: textureSize,
         format: textureFormat,
