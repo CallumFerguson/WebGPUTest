@@ -41,7 +41,7 @@ async function main() {
 
   let cameraModel = mat4.create();
   let cameraRotation = quat.create();
-  let cameraPosition = vec3.fromValues(0, 0, 1);
+  let cameraPosition = vec3.fromValues(0, 0, 1.25);
 
   let view = mat4.create();
   calculateView();
