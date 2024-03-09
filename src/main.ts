@@ -90,7 +90,6 @@ async function main() {
   const numObjects = 8000000; // 8000000
   const particleRenderer = new ParticleRender(
     device,
-    presentationFormat,
     cameraDataBuffer,
     numObjects,
     canvas.width,

@@ -9,7 +9,6 @@ export class ParticleRender {
 
   constructor(
     device: GPUDevice,
-    presentationFormat: GPUTextureFormat,
     cameraDataBuffer: GPUBuffer,
     numObjects: number,
     canvasWidth: number,
@@ -61,6 +60,7 @@ export class ParticleRender {
       bindGroupLayouts: [bindGroupLayoutGroup0, bindGroupLayoutGroup1],
     });
 
+    const textureFormat: GPUTextureFormat = "rgba16float"; // presentationFormat / rgba16float
     const pipelineDescriptor: GPURenderPipelineDescriptor = {
       layout: pipelineLayout,
       vertex: {
@@ -73,7 +73,7 @@ export class ParticleRender {
         entryPoint: "frag",
         targets: [
           {
-            format: presentationFormat,
+            format: textureFormat,
             blend: {
               color: {
                 operation: "add",
@@ -111,7 +111,7 @@ export class ParticleRender {
 
     let renderTexture = device.createTexture({
       size: [canvasWidth, canvasHeight],
-      format: presentationFormat,
+      format: textureFormat,
       usage:
         GPUTextureUsage.RENDER_ATTACHMENT | GPUTextureUsage.TEXTURE_BINDING,
     });
@@ -133,7 +133,7 @@ export class ParticleRender {
       renderTexture.destroy();
       renderTexture = device.createTexture({
         size: [canvasWidth, canvasHeight],
-        format: presentationFormat,
+        format: textureFormat,
         usage:
           GPUTextureUsage.RENDER_ATTACHMENT | GPUTextureUsage.TEXTURE_BINDING,
       });
