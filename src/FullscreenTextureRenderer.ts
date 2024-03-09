@@ -59,8 +59,8 @@ export class FullscreenTextureRenderer {
     const pipeline = device.createRenderPipeline(pipelineDescriptor);
 
     const sampler = device.createSampler({
-      magFilter: "nearest",
-      minFilter: "nearest",
+      magFilter: "linear",
+      minFilter: "linear",
     });
 
     let bindGroup0 = device.createBindGroup({
