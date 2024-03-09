@@ -91,9 +91,7 @@ async function main() {
   const particleRenderer = new ParticleRender(
     device,
     cameraDataBuffer,
-    numObjects,
-    canvas.width,
-    canvas.height
+    numObjects
   );
   const particleComputer = new ParticleComputer(
     device,
@@ -133,9 +131,6 @@ async function main() {
       return;
     }
 
-    particleRenderer.resize(canvas.width, canvas.height);
-    fullscreenTextureRenderer.resize(particleRenderer.textureView);
-
     calculateProjection();
   }
 
@@ -169,8 +164,8 @@ async function main() {
 
   document.addEventListener("wheel", (event) => {
     const sensitivity = 1.5;
-    const minDist = 0.1;
-    const maxDist = 25;
+    const minDist = 0.5;
+    const maxDist = 10;
     cameraPosition[2] = clamp(
       cameraPosition[2] * (1 + event.deltaY / (500 / sensitivity)),
       minDist,
@@ -216,7 +211,6 @@ async function main() {
     cameraData.set({
       view: view,
       projection: projection,
-      canvasHeight: canvas.height,
     });
     device.queue.writeBuffer(cameraDataBuffer, 0, cameraData.arrayBuffer);
 

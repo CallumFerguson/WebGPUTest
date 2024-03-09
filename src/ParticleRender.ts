@@ -5,14 +5,11 @@ export class ParticleRender {
   textureView: GPUTextureView;
 
   renderPass: (commandEncoder: GPUCommandEncoder) => void;
-  resize: (canvasWidth: number, canvasHeight: number) => void;
 
   constructor(
     device: GPUDevice,
     cameraDataBuffer: GPUBuffer,
-    numObjects: number,
-    canvasWidth: number,
-    canvasHeight: number
+    numObjects: number
   ) {
     const positionsArrayBuffer = new ArrayBuffer(numObjects * 16);
     const positionsArrayBufferView = new Float32Array(positionsArrayBuffer);
@@ -109,10 +106,11 @@ export class ParticleRender {
       entries: [{ binding: 0, resource: { buffer: this.positionsBuffer } }],
     });
 
-    let textureSize = [
-      Math.min(device.limits.maxTextureDimension2D, canvasWidth * 2),
-      Math.min(device.limits.maxTextureDimension2D, canvasHeight * 2),
+    const textureSize = [
+      Math.min(device.limits.maxTextureDimension2D, 1260 * 2),
+      Math.min(device.limits.maxTextureDimension2D, 881 * 2),
     ];
+
     let renderTexture = device.createTexture({
       size: textureSize,
       format: textureFormat,
@@ -131,24 +129,6 @@ export class ParticleRender {
           storeOp: "store",
         },
       ],
-    };
-
-    this.resize = (canvasWidth: number, canvasHeight: number) => {
-      renderTexture.destroy();
-
-      let textureSize = [
-        Math.min(device.limits.maxTextureDimension2D, canvasWidth * 2),
-        Math.min(device.limits.maxTextureDimension2D, canvasHeight * 2),
-      ];
-      renderTexture = device.createTexture({
-        size: textureSize,
-        format: textureFormat,
-        usage:
-          GPUTextureUsage.RENDER_ATTACHMENT | GPUTextureUsage.TEXTURE_BINDING,
-      });
-      this.textureView = renderTexture.createView();
-      // @ts-ignore
-      renderPassDescriptor.colorAttachments[0].view = this.textureView;
     };
 
     this.renderPass = (commandEncoder: GPUCommandEncoder) => {
