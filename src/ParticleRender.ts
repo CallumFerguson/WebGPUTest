@@ -109,8 +109,13 @@ export class ParticleRender {
       entries: [{ binding: 0, resource: { buffer: this.positionsBuffer } }],
     });
 
+    let textureSize = [
+      Math.min(device.limits.maxTextureDimension2D, canvasWidth * 2),
+      Math.min(device.limits.maxTextureDimension2D, canvasHeight * 2),
+    ];
+
     let renderTexture = device.createTexture({
-      size: [canvasWidth * 2, canvasHeight * 2],
+      size: textureSize,
       format: textureFormat,
       usage:
         GPUTextureUsage.RENDER_ATTACHMENT | GPUTextureUsage.TEXTURE_BINDING,
@@ -132,7 +137,7 @@ export class ParticleRender {
     this.resize = (canvasWidth: number, canvasHeight: number) => {
       renderTexture.destroy();
       renderTexture = device.createTexture({
-        size: [canvasWidth * 2, canvasHeight * 2],
+        size: textureSize,
         format: textureFormat,
         usage:
           GPUTextureUsage.RENDER_ATTACHMENT | GPUTextureUsage.TEXTURE_BINDING,
