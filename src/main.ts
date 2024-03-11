@@ -30,6 +30,14 @@ async function main() {
     alphaMode: "opaque",
   });
 
+  const renderFunctions: ((renderPassEncoder: GPURenderPassEncoder) => void)[] =
+    [];
+  const computeFunctions: ((
+    computePassEncoder: GPUComputePassEncoder
+  ) => void)[] = [];
+  const renderPassFunctions: ((commandEncoder: GPUCommandEncoder) => void)[] =
+    [];
+
   let cameraParentXModel = mat4.create();
   let cameraParentXRotation = quat.create();
   let cameraParentXPosition = vec3.fromValues(0, 0, -1);
@@ -93,19 +101,25 @@ async function main() {
     cameraDataBuffer,
     numObjects
   );
+  renderPassFunctions.push(particleRenderer.renderPass);
+
   const particleComputer = new ParticleComputer(
     device,
     particleRenderer.positionsBuffer,
     timeBuffer,
     numObjects
   );
+  computeFunctions.push(particleComputer.compute);
 
   const backgroundRenderer = new BackgroundRenderer(device, presentationFormat);
+  renderFunctions.push(backgroundRenderer.render);
+
   const fullscreenTextureRenderer = new FullscreenTextureRenderer(
     device,
     presentationFormat,
     particleRenderer.textureView
   );
+  renderFunctions.push(fullscreenTextureRenderer.render);
 
   function resizeCanvasIfNeeded(): boolean {
     const width = Math.max(
@@ -221,23 +235,25 @@ async function main() {
       .getCurrentTexture()
       .createView();
 
-    particleRenderer.renderPass(commandEncoder);
+    renderPassFunctions.forEach((renderPassFunction) => {
+      renderPassFunction(commandEncoder);
+    });
 
     const renderPassEncoder = commandEncoder.beginRenderPass(
       renderPassDescriptor as GPURenderPassDescriptor
     );
 
-    backgroundRenderer.render(renderPassEncoder);
-    fullscreenTextureRenderer.render(renderPassEncoder);
+    renderFunctions.forEach((renderFunction) => {
+      renderFunction(renderPassEncoder);
+    });
 
     renderPassEncoder.end();
 
     const computePassEncoder = commandEncoder.beginComputePass();
 
-    const computeStepsPerFrame = 2;
-    for (let i = 0; i < computeStepsPerFrame; i++) {
-      particleComputer.compute(computePassEncoder);
-    }
+    computeFunctions.forEach((computeFunction) => {
+      computeFunction(computePassEncoder);
+    });
 
     computePassEncoder.end();
 

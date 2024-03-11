@@ -89,7 +89,11 @@ export class ParticleComputer {
       computePassEncoder.setPipeline(computePipeline);
       computePassEncoder.setBindGroup(0, computeBindGroup0);
       computePassEncoder.setBindGroup(1, computeBindGroup1);
-      computePassEncoder.dispatchWorkgroups(numObjects / 128);
+
+      const computeStepsPerFrame = 2;
+      for (let i = 0; i < computeStepsPerFrame; i++) {
+        computePassEncoder.dispatchWorkgroups(numObjects / 128);
+      }
     };
   }
 }
