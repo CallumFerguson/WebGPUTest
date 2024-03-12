@@ -109,8 +109,13 @@ export async function loadModel(fileName: string): Promise<{
   const uvs = Float32Array.from(mesh.texturecoords[0]);
   const indices = Uint32Array.from(mesh.faces.flat());
 
-  const textureJson = resultJson.textures[0];
-  const textureURI = `data:image/${textureJson.formathint};base64,${textureJson.data}`;
+  let textureURI;
+  if (resultJson.textures && resultJson.textures.length > 0) {
+    const textureJson = resultJson.textures[0];
+    textureURI = `data:image/${textureJson.formathint};base64,${textureJson.data}`;
+  } else {
+    textureURI = "";
+  }
 
   return { vertices, normals, uvs, textureURI, indices };
 }

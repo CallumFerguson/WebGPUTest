@@ -2,11 +2,8 @@ import pointParticleShaderString from "../shaders/pointParticle.wgsl?raw";
 import computeShaderString from "../shaders/compute.wgsl?raw";
 import { mat4, vec3, quat } from "gl-matrix";
 import { clamp, getDevice } from "./utility";
-import { ParticleRender } from "./ParticleRender";
-import { ParticleComputer } from "./ParticleComputer";
 import { makeShaderDataDefinitions, makeStructuredView } from "webgpu-utils";
-import { BackgroundRenderer } from "./BackgroundRenderer";
-import { FullscreenTextureRenderer } from "./FullscreenTextureRenderer";
+import { BallRenderer } from "./BallRenderer";
 
 async function main() {
   const { gpu, device } = await getDevice();
@@ -95,31 +92,38 @@ async function main() {
     usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
   });
 
-  const numObjects = 8000000; // 8000000
-  const particleRenderer = new ParticleRender(
+  // const numObjects = 8000000; // 8000000
+  // const particleRenderer = new ParticleRender(
+  //   device,
+  //   cameraDataBuffer,
+  //   numObjects
+  // );
+  // renderPassFunctions.push(particleRenderer.renderPass);
+  //
+  // const particleComputer = new ParticleComputer(
+  //   device,
+  //   particleRenderer.positionsBuffer,
+  //   timeBuffer,
+  //   numObjects
+  // );
+  // computeFunctions.push(particleComputer.compute);
+  //
+  // const fullscreenTextureRenderer = new FullscreenTextureRenderer(
+  //   device,
+  //   presentationFormat,
+  //   particleRenderer.textureView
+  // );
+  // renderFunctions.push(fullscreenTextureRenderer.render);
+
+  const numObjects = 10;
+  const ballRenderer = new BallRenderer();
+  await ballRenderer.init(
     device,
+    presentationFormat,
     cameraDataBuffer,
     numObjects
   );
-  renderPassFunctions.push(particleRenderer.renderPass);
-
-  const particleComputer = new ParticleComputer(
-    device,
-    particleRenderer.positionsBuffer,
-    timeBuffer,
-    numObjects
-  );
-  computeFunctions.push(particleComputer.compute);
-
-  const backgroundRenderer = new BackgroundRenderer(device, presentationFormat);
-  renderFunctions.push(backgroundRenderer.render);
-
-  const fullscreenTextureRenderer = new FullscreenTextureRenderer(
-    device,
-    presentationFormat,
-    particleRenderer.textureView
-  );
-  renderFunctions.push(fullscreenTextureRenderer.render);
+  renderFunctions.push(ballRenderer.render);
 
   function resizeCanvasIfNeeded(): boolean {
     const width = Math.max(
@@ -145,6 +149,7 @@ async function main() {
       return;
     }
 
+    createDepthTexture();
     calculateProjection();
   }
 
@@ -156,7 +161,29 @@ async function main() {
         storeOp: "store",
       },
     ],
+    depthStencilAttachment: {
+      depthClearValue: 1,
+      depthLoadOp: "clear",
+      depthStoreOp: "store",
+    },
   };
+
+  let depthTexture: GPUTexture;
+  function createDepthTexture() {
+    if (depthTexture) {
+      depthTexture.destroy();
+    }
+    depthTexture = device.createTexture({
+      size: [canvas.width, canvas.height],
+      format: "depth24plus",
+      sampleCount: 1,
+      usage: GPUTextureUsage.RENDER_ATTACHMENT,
+    });
+    // @ts-ignore
+    renderPassDescriptor.depthStencilAttachment.view =
+      depthTexture.createView();
+  }
+  createDepthTexture();
 
   let mouseX = 0;
   let mouseY = 0;
