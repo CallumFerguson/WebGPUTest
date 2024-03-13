@@ -3,9 +3,14 @@ struct CameraData {
     projection: mat4x4f,
 }
 
+struct BodyInfo {
+    position: vec3f,
+    velocity: vec3f,
+}
+
 @group(0) @binding(0) var<uniform> cameraData: CameraData;
 
-@group(1) @binding(0) var<storage, read> positions: array<vec3f>;
+@group(1) @binding(0) var<storage, read> bodyInfo: array<BodyInfo>;
 
 struct VertexInput {
     @builtin(instance_index) instanceIndex: u32,
@@ -22,7 +27,7 @@ struct VertexOutput {
 fn vert(i: VertexInput) -> VertexOutput {
     var o: VertexOutput;
 
-    o.position = cameraData.projection * cameraData.view * vec4(i.position * 0.1 + positions[i.instanceIndex], 1);
+    o.position = cameraData.projection * cameraData.view * vec4(i.position * 0.5 * 0.12 * 2 + bodyInfo[i.instanceIndex].position, 1);
     o.normal = i.normal;
 
     return o;

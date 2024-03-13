@@ -1,5 +1,10 @@
 import { vec3 } from "gl-matrix";
 
+export type BufferBundle = {
+  buffer: GPUBuffer;
+  bindGroups: GPUBindGroup[];
+};
+
 export async function getDevice(): Promise<{ gpu: GPU; device: GPUDevice }> {
   const gpu = navigator.gpu;
   if (!gpu) {

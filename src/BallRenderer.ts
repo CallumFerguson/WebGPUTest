@@ -1,10 +1,13 @@
 import ballShaderString from "../shaders/ball.wgsl?raw";
-import { createBuffer, loadModel } from "./utility";
+import { BufferBundle, createBuffer, loadModel } from "./utility";
+
+// const ballRadius = 0.12;
 
 export class BallRenderer {
-  positionsBuffer: GPUBuffer | undefined;
+  positionBufferBundles: BufferBundle[] = [];
 
   render: (renderPassEncoder: GPURenderPassEncoder) => void = () => {};
+  fixedUpdate: (fixedDeltaTime: number) => void = () => {};
 
   async init(
     device: GPUDevice,
@@ -12,23 +15,13 @@ export class BallRenderer {
     cameraDataBuffer: GPUBuffer,
     numObjects: number
   ) {
-    const positionsArrayBuffer = new ArrayBuffer(numObjects * 16);
-    const positionsArrayBufferView = new Float32Array(positionsArrayBuffer);
-    this.positionsBuffer = device.createBuffer({
-      size: positionsArrayBuffer.byteLength,
-      usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
-    });
-    // const position = vec3.create();
+    let bodyInfoArrayBuffer = new ArrayBuffer(numObjects * 16 * 2);
+    let bodyInfoArrayBufferView = new Float32Array(bodyInfoArrayBuffer);
     for (let i = 0; i < numObjects; i++) {
-      // randomDirection(position, Math.random() * 0.25 + 0.25);
-
-      // positionsArrayBufferView[i * 4 + 2] = -1;
-
-      positionsArrayBufferView[i * 4] = i / 4 - 1;
-      positionsArrayBufferView[i * 4 + 1] = 0;
-      positionsArrayBufferView[i * 4 + 2] = -1;
+      bodyInfoArrayBufferView[i * 8] = i / 10 - 1;
+      bodyInfoArrayBufferView[i * 8 + 1] = 3 + i / 2;
+      bodyInfoArrayBufferView[i * 8 + 2] = 0;
     }
-    device.queue.writeBuffer(this.positionsBuffer, 0, positionsArrayBuffer);
 
     const shaderModule = device.createShaderModule({
       code: ballShaderString,
@@ -53,6 +46,26 @@ export class BallRenderer {
         },
       ],
     });
+
+    for (let i = 0; i < 2; i++) {
+      const buffer = device.createBuffer({
+        size: bodyInfoArrayBuffer.byteLength,
+        usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
+      });
+      const bindGroup = device.createBindGroup({
+        layout: bindGroupLayoutGroup1,
+        entries: [{ binding: 0, resource: { buffer } }],
+      });
+      this.positionBufferBundles.push({
+        buffer,
+        bindGroups: [bindGroup],
+      });
+    }
+    device.queue.writeBuffer(
+      this.positionBufferBundles[0].buffer,
+      0,
+      bodyInfoArrayBuffer
+    );
 
     const pipelineLayout = device.createPipelineLayout({
       bindGroupLayouts: [bindGroupLayoutGroup0, bindGroupLayoutGroup1],
@@ -109,16 +122,14 @@ export class BallRenderer {
       entries: [{ binding: 0, resource: { buffer: cameraDataBuffer } }],
     });
 
-    const bindGroup1 = device.createBindGroup({
-      layout: bindGroupLayoutGroup1,
-      entries: [{ binding: 0, resource: { buffer: this.positionsBuffer } }],
-    });
-
     this.render = (renderPassEncoder: GPURenderPassEncoder) => {
       renderPassEncoder.setPipeline(pipeline);
 
       renderPassEncoder.setBindGroup(0, bindGroup0);
-      renderPassEncoder.setBindGroup(1, bindGroup1);
+      renderPassEncoder.setBindGroup(
+        1,
+        this.positionBufferBundles[0].bindGroups[0]
+      );
 
       renderPassEncoder.setVertexBuffer(0, vertexBuffer);
       renderPassEncoder.setVertexBuffer(1, normalBuffer);

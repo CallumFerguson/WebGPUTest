@@ -1,4 +1,4 @@
-import computeShaderString from "../shaders/compute.wgsl?raw";
+import computeParticleShaderString from "../shaders/computeParticle.wgsl?raw";
 
 export class ParticleComputer {
   positionsBuffer: GPUBuffer;
@@ -29,7 +29,7 @@ export class ParticleComputer {
     device.queue.writeBuffer(velocitiesBuffer, 0, velocitiesArrayBuffer);
 
     const computeShaderModule = device.createShaderModule({
-      code: computeShaderString,
+      code: computeParticleShaderString,
     });
 
     const computeBindGroupLayoutGroup0 = device.createBindGroupLayout({

@@ -1,9 +1,10 @@
 import pointParticleShaderString from "../shaders/pointParticle.wgsl?raw";
-import computeShaderString from "../shaders/compute.wgsl?raw";
+import computeParticleShaderString from "../shaders/computeParticle.wgsl?raw";
 import { mat4, vec3, quat } from "gl-matrix";
 import { clamp, getDevice } from "./utility";
 import { makeShaderDataDefinitions, makeStructuredView } from "webgpu-utils";
 import { BallRenderer } from "./BallRenderer";
+import { BallComputer } from "./BallComputer";
 
 async function main() {
   const { gpu, device } = await getDevice();
@@ -34,10 +35,11 @@ async function main() {
   ) => void)[] = [];
   const renderPassFunctions: ((commandEncoder: GPUCommandEncoder) => void)[] =
     [];
+  const fixedUpdateFunctions: ((fixedDeltaTime: number) => void)[] = [];
 
   let cameraParentXModel = mat4.create();
   let cameraParentXRotation = quat.create();
-  let cameraParentXPosition = vec3.fromValues(0, 0, -1);
+  let cameraParentXPosition = vec3.fromValues(0, 0, 0);
 
   let cameraParentYEuler = 0;
   let cameraParentYModel = mat4.create();
@@ -46,7 +48,7 @@ async function main() {
 
   let cameraModel = mat4.create();
   let cameraRotation = quat.create();
-  let cameraPosition = vec3.fromValues(0, 0, 1.25);
+  let cameraPosition = vec3.fromValues(0, 0, 5);
 
   let view = mat4.create();
   calculateView();
@@ -85,7 +87,7 @@ async function main() {
     usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
   });
 
-  const computeDefs = makeShaderDataDefinitions(computeShaderString);
+  const computeDefs = makeShaderDataDefinitions(computeParticleShaderString);
   const timeData = makeStructuredView(computeDefs.uniforms.timeData);
   const timeBuffer = device.createBuffer({
     size: timeData.arrayBuffer.byteLength,
@@ -115,7 +117,7 @@ async function main() {
   // );
   // renderFunctions.push(fullscreenTextureRenderer.render);
 
-  const numObjects = 10;
+  const numObjects = 64;
   const ballRenderer = new BallRenderer();
   await ballRenderer.init(
     device,
@@ -123,7 +125,15 @@ async function main() {
     cameraDataBuffer,
     numObjects
   );
+  fixedUpdateFunctions.push(ballRenderer.fixedUpdate);
   renderFunctions.push(ballRenderer.render);
+
+  const ballComputer = new BallComputer(
+    device,
+    ballRenderer.positionBufferBundles,
+    numObjects
+  );
+  computeFunctions.push(ballComputer.compute);
 
   function resizeCanvasIfNeeded(): boolean {
     const width = Math.max(
@@ -215,10 +225,15 @@ async function main() {
     calculateView();
   });
 
+  const fixedUpdatesPerSecond = 100;
+  const fixedDeltaTime = 1 / fixedUpdatesPerSecond;
+  let accumulatedTime = 0;
+
   let previousTime = 0;
   async function render(currentTime: number) {
     currentTime *= 0.001;
     const deltaTime = currentTime - previousTime;
+    accumulatedTime += deltaTime;
     let mouseDeltaX = lastMouseX - mouseX;
     let mouseDeltaY = lastMouseY - mouseY;
 
@@ -242,6 +257,13 @@ async function main() {
       quat.fromEuler(cameraParentYRotation, cameraParentYEuler, 0, 0);
 
       calculateView();
+    }
+
+    while (accumulatedTime >= fixedDeltaTime) {
+      fixedUpdateFunctions.forEach((fixedUpdateFunction) => {
+        fixedUpdateFunction(fixedDeltaTime);
+      });
+      accumulatedTime -= fixedDeltaTime;
     }
 
     timeData.set({
