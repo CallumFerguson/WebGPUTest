@@ -31,7 +31,8 @@ async function main() {
   const renderFunctions: ((renderPassEncoder: GPURenderPassEncoder) => void)[] =
     [];
   const computeFunctions: ((
-    computePassEncoder: GPUComputePassEncoder
+    computePassEncoder: GPUComputePassEncoder,
+    numFixedUpdatesThisFrame: number
   ) => void)[] = [];
   const renderPassFunctions: ((commandEncoder: GPUCommandEncoder) => void)[] =
     [];
@@ -259,7 +260,9 @@ async function main() {
       calculateView();
     }
 
+    let numFixedUpdatesThisFrame = 0;
     while (accumulatedTime >= fixedDeltaTime) {
+      numFixedUpdatesThisFrame++;
       fixedUpdateFunctions.forEach((fixedUpdateFunction) => {
         fixedUpdateFunction(fixedDeltaTime);
       });
@@ -301,7 +304,7 @@ async function main() {
     const computePassEncoder = commandEncoder.beginComputePass();
 
     computeFunctions.forEach((computeFunction) => {
-      computeFunction(computePassEncoder);
+      computeFunction(computePassEncoder, numFixedUpdatesThisFrame);
     });
 
     computePassEncoder.end();

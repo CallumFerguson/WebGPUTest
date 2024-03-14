@@ -19,9 +19,23 @@ export class BallRenderer {
     let bodyInfoArrayBufferView = new Float32Array(bodyInfoArrayBuffer);
     for (let i = 0; i < numObjects; i++) {
       bodyInfoArrayBufferView[i * 8] = i / 10 - 1;
-      bodyInfoArrayBufferView[i * 8 + 1] = 3 + i / 2;
+      bodyInfoArrayBufferView[i * 8 + 1] = 3 + i / 2 - 10;
       bodyInfoArrayBufferView[i * 8 + 2] = 0;
+
+      // bodyInfoArrayBufferView[i * 8 + 4] = Math.random() - 0.5;
+      // bodyInfoArrayBufferView[i * 8 + 4 + 1] = Math.random() - 0.5;
+      // bodyInfoArrayBufferView[i * 8 + 4 + 2] = Math.random() - 0.5;
     }
+
+    // bodyInfoArrayBufferView[0] = 0;
+    // bodyInfoArrayBufferView[1] = 0;
+    // bodyInfoArrayBufferView[2] = 0;
+    //
+    // bodyInfoArrayBufferView[8] = 0.1;
+    // bodyInfoArrayBufferView[8 + 1] = 2;
+    // bodyInfoArrayBufferView[8 + 2] = 0;
+    //
+    // bodyInfoArrayBufferView[8 + 4 + 1] = -2;
 
     const shaderModule = device.createShaderModule({
       code: ballShaderString,

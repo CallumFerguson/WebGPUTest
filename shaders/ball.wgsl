@@ -8,6 +8,8 @@ struct BodyInfo {
     velocity: vec3f,
 }
 
+const radius = 0.12;
+
 @group(0) @binding(0) var<uniform> cameraData: CameraData;
 
 @group(1) @binding(0) var<storage, read> bodyInfo: array<BodyInfo>;
@@ -27,7 +29,7 @@ struct VertexOutput {
 fn vert(i: VertexInput) -> VertexOutput {
     var o: VertexOutput;
 
-    o.position = cameraData.projection * cameraData.view * vec4(i.position * 0.5 * 0.12 * 2 + bodyInfo[i.instanceIndex].position, 1);
+    o.position = cameraData.projection * cameraData.view * vec4(i.position * 0.5 * radius * 2 + bodyInfo[i.instanceIndex].position, 1);
     o.normal = i.normal;
 
     return o;
