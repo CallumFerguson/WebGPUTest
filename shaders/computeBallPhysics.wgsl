@@ -5,10 +5,12 @@ struct SimulationInfo {
 
 struct Body {
     position: vec3f,
+    radius: f32,
     velocity: vec3f,
+    restitution: f32,
+    color: vec3f,
+    mass: f32,
 }
-
-const radius = 0.12;
 
 @group(0) @binding(0) var<uniform> simulationInfo: SimulationInfo;
 @group(1) @binding(0) var<storage, read> bodies: array<Body>;
@@ -25,6 +27,7 @@ const radius = 0.12;
     for (var i = 0u; i < 64; i++) {
         if (i != bodyIndex) {
             var otherBody = bodies[i];
+            // TODO: take mass into account + put correct mass in body info on init
             nextBody.velocity += getGravityForce(body.position, otherBody.position) * simulationInfo.fixedDeltaTime * 1;
         }
     }
@@ -45,24 +48,24 @@ const radius = 0.12;
             var otherBody = bodies[i];
             var toOther = otherBody.position - body.position;
             var distance = length(toOther);
-            if (distance < radius * 2) {
+            if (distance < body.radius + otherBody.radius) {
                 var normal = toOther / distance;
                 var relativeVelocity = otherBody.velocity - body.velocity;
                 var velocityAlongNormal = dot(relativeVelocity, normal);
 
                 if (velocityAlongNormal <= 0) {
-                    var restitution = 0.0; // min(r1, r2);
+                    var restitution = min(body.restitution, otherBody.restitution);
 
                     // calculate impulse scalar
                     var j = -(1 + restitution) * velocityAlongNormal;
-//                    j /= 1 / b1.mass + 1 / b2.mass;
+                    j /= 1 / body.mass + 1 / otherBody.mass;
                     j /= 2;
 
                     var impulse = normal * j;
-                    nextBody.velocity -= impulse; // * (1 / nextBody.mass);
+                    nextBody.velocity -= impulse * (1 / body.mass);
                 }
 
-                nextBody.position -= toOther * (radius * 2 - distance) * 0.5;
+                nextBody.position -= toOther * ((body.radius + otherBody.radius) - distance) * 0.5;
             }
         }
     }

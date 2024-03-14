@@ -50,7 +50,7 @@ async function main() {
 
   let cameraModel = mat4.create();
   let cameraRotation = quat.create();
-  let cameraPosition = vec3.fromValues(0, 0, 5);
+  let cameraPosition = vec3.fromValues(0, 0, 40);
 
   let view = mat4.create();
   calculateView();
@@ -119,7 +119,7 @@ async function main() {
   // );
   // renderFunctions.push(fullscreenTextureRenderer.render);
 
-  const numObjects = 64 * 40;
+  const numObjects = 64 * 50;
   const ballRenderer = new BallRenderer();
   await ballRenderer.init(
     device,
@@ -218,7 +218,7 @@ async function main() {
   document.addEventListener("wheel", (event) => {
     const sensitivity = 1.5;
     const minDist = 0.5;
-    const maxDist = 25;
+    const maxDist = 50;
     cameraPosition[2] = clamp(
       cameraPosition[2] * (1 + event.deltaY / (500 / sensitivity)),
       minDist,
@@ -228,6 +228,7 @@ async function main() {
   });
 
   const maxFixedUpdatesPerFrame = 10;
+  let simulationBehind = false;
 
   let previousTime = 0;
   let accumulatedTime = 0;
@@ -278,6 +279,10 @@ async function main() {
       console.log(
         `simulation is ${accumulatedTime - fixedDeltaTime} seconds behind`
       );
+      simulationBehind = true;
+    } else if (simulationBehind) {
+      simulationBehind = false;
+      console.log("simulation caught up");
     }
     // console.log(numFixedUpdatesThisFrame);
 

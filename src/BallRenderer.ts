@@ -15,11 +15,11 @@ export class BallRenderer {
     cameraDataBuffer: GPUBuffer,
     numObjects: number
   ) {
-    let bodyInfoArrayBuffer = new ArrayBuffer(numObjects * 16 * 2);
+    let bodyInfoArrayBuffer = new ArrayBuffer(numObjects * 16 * 3);
     let bodyInfoArrayBufferView = new Float32Array(bodyInfoArrayBuffer);
 
     const sideLength = Math.ceil(Math.cbrt(numObjects));
-    const spacing = 1;
+    const spacing = 3;
     const startPositions = [];
     for (let z = sideLength - 1; z >= 0; z--) {
       for (let y = 0; y < sideLength; y++) {
@@ -38,13 +38,29 @@ export class BallRenderer {
     shuffleArray(startPositions);
 
     for (let i = 0; i < numObjects; i++) {
-      bodyInfoArrayBufferView[i * 8] = startPositions[i][0];
-      bodyInfoArrayBufferView[i * 8 + 1] = startPositions[i][1];
-      bodyInfoArrayBufferView[i * 8 + 2] = startPositions[i][2];
+      // position
+      bodyInfoArrayBufferView[i * 12] = startPositions[i][0];
+      bodyInfoArrayBufferView[i * 12 + 1] = startPositions[i][1];
+      bodyInfoArrayBufferView[i * 12 + 2] = startPositions[i][2];
 
-      bodyInfoArrayBufferView[i * 8 + 4] = Math.random() - 0.5;
-      bodyInfoArrayBufferView[i * 8 + 4 + 1] = Math.random() - 0.5;
-      bodyInfoArrayBufferView[i * 8 + 4 + 2] = Math.random() - 0.5;
+      // velocity
+      bodyInfoArrayBufferView[i * 12 + 4] = Math.random() - 0.5;
+      bodyInfoArrayBufferView[i * 12 + 4 + 1] = Math.random() - 0.5;
+      bodyInfoArrayBufferView[i * 12 + 4 + 2] = Math.random() - 0.5;
+
+      // color
+      bodyInfoArrayBufferView[i * 12 + 8] = Math.random() * 0.8 + 0.2;
+      bodyInfoArrayBufferView[i * 12 + 8 + 1] = Math.random() * 0.8 + 0.2;
+      bodyInfoArrayBufferView[i * 12 + 8 + 2] = Math.random() * 0.8 + 0.2;
+
+      // radius
+      bodyInfoArrayBufferView[i * 12 + 3] = 0.1 + Math.random(); // 0.12
+
+      // restitution
+      bodyInfoArrayBufferView[i * 12 + 7] = 0;
+
+      // mass
+      bodyInfoArrayBufferView[i * 12 + 11] = 1;
     }
 
     // bodyInfoArrayBufferView[0] = 0;
