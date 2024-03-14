@@ -1,5 +1,5 @@
 import ballShaderString from "../shaders/ball.wgsl?raw";
-import { BufferBundle, createBuffer, loadModel } from "./utility";
+import { BufferBundle, createBuffer, loadModel, shuffleArray } from "./utility";
 
 // const ballRadius = 0.12;
 
@@ -17,14 +17,34 @@ export class BallRenderer {
   ) {
     let bodyInfoArrayBuffer = new ArrayBuffer(numObjects * 16 * 2);
     let bodyInfoArrayBufferView = new Float32Array(bodyInfoArrayBuffer);
-    for (let i = 0; i < numObjects; i++) {
-      bodyInfoArrayBufferView[i * 8] = i / 10 - 1;
-      bodyInfoArrayBufferView[i * 8 + 1] = 3 + i / 2 - 10;
-      bodyInfoArrayBufferView[i * 8 + 2] = 0;
 
-      // bodyInfoArrayBufferView[i * 8 + 4] = Math.random() - 0.5;
-      // bodyInfoArrayBufferView[i * 8 + 4 + 1] = Math.random() - 0.5;
-      // bodyInfoArrayBufferView[i * 8 + 4 + 2] = Math.random() - 0.5;
+    const sideLength = Math.ceil(Math.cbrt(numObjects));
+    const spacing = 1;
+    const startPositions = [];
+    for (let z = sideLength - 1; z >= 0; z--) {
+      for (let y = 0; y < sideLength; y++) {
+        for (let x = 0; x < sideLength; x++) {
+          if (startPositions.length == numObjects) {
+            break;
+          }
+          startPositions.push([
+            x * spacing - (sideLength * spacing) / 2,
+            y * spacing - (sideLength * spacing) / 2,
+            z * spacing - (sideLength * spacing) / 2,
+          ]);
+        }
+      }
+    }
+    shuffleArray(startPositions);
+
+    for (let i = 0; i < numObjects; i++) {
+      bodyInfoArrayBufferView[i * 8] = startPositions[i][0];
+      bodyInfoArrayBufferView[i * 8 + 1] = startPositions[i][1];
+      bodyInfoArrayBufferView[i * 8 + 2] = startPositions[i][2];
+
+      bodyInfoArrayBufferView[i * 8 + 4] = Math.random() - 0.5;
+      bodyInfoArrayBufferView[i * 8 + 4 + 1] = Math.random() - 0.5;
+      bodyInfoArrayBufferView[i * 8 + 4 + 2] = Math.random() - 0.5;
     }
 
     // bodyInfoArrayBufferView[0] = 0;

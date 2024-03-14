@@ -1,5 +1,7 @@
-import computeBallPhysics from "../shaders/computeBallPhysics.wgsl?raw";
+import computeBallPhysicsShaderString from "../shaders/computeBallPhysics.wgsl?raw";
 import { BufferBundle } from "./utility";
+import { makeShaderDataDefinitions, makeStructuredView } from "webgpu-utils";
+import { fixedDeltaTime } from "./constants";
 
 export class BallComputer {
   compute: (
@@ -13,7 +15,17 @@ export class BallComputer {
     numObjects: number
   ) {
     const computeShaderModule = device.createShaderModule({
-      code: computeBallPhysics,
+      code: computeBallPhysicsShaderString,
+    });
+
+    const computeBindGroupLayout0 = device.createBindGroupLayout({
+      entries: [
+        {
+          binding: 0,
+          visibility: GPUShaderStage.COMPUTE,
+          buffer: {},
+        },
+      ],
     });
 
     const computeBindGroupLayoutRead = device.createBindGroupLayout({
@@ -38,6 +50,7 @@ export class BallComputer {
 
     const computePipelineLayout = device.createPipelineLayout({
       bindGroupLayouts: [
+        computeBindGroupLayout0,
         computeBindGroupLayoutRead,
         computeBindGroupLayoutWrite,
       ],
@@ -57,6 +70,36 @@ export class BallComputer {
         module: computeShaderModule,
         entryPoint: "handleCollisions",
       },
+    });
+
+    const defs = makeShaderDataDefinitions(computeBallPhysicsShaderString);
+    const simulationInfo = makeStructuredView(defs.uniforms.simulationInfo);
+    const simulationInfoBuffer = device.createBuffer({
+      size: simulationInfo.arrayBuffer.byteLength,
+      usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
+    });
+
+    let workgroupCount = numObjects / 64;
+    if (!Number.isInteger(workgroupCount)) {
+      workgroupCount = Math.ceil(workgroupCount);
+      console.log(
+        "Until I feel like looking into this, numObjects should probably be a multiple of the workgroup size."
+      );
+    }
+
+    simulationInfo.set({
+      fixedDeltaTime,
+      workgroupCount,
+    });
+    device.queue.writeBuffer(
+      simulationInfoBuffer,
+      0,
+      simulationInfo.arrayBuffer
+    );
+
+    const simulationInfoBindGroup = device.createBindGroup({
+      layout: computeBindGroupLayout0,
+      entries: [{ binding: 0, resource: { buffer: simulationInfoBuffer } }],
     });
 
     positionBufferBundles[0].bindGroups.push(
@@ -104,20 +147,12 @@ export class BallComputer {
 
     function setBindGroups(computePassEncoder: GPUComputePassEncoder) {
       computePassEncoder.setBindGroup(
-        0,
+        1,
         positionBufferBundles[0].bindGroups[1]
       );
       computePassEncoder.setBindGroup(
-        1,
+        2,
         positionBufferBundles[1].bindGroups[2]
-      );
-    }
-
-    let workgroupCount = numObjects / 64;
-    if (!Number.isInteger(workgroupCount)) {
-      workgroupCount = Math.ceil(workgroupCount);
-      console.log(
-        "Until I feel like looking into this, numObjects should probably be a multiple of the workgroup size."
       );
     }
 
@@ -125,6 +160,8 @@ export class BallComputer {
       computePassEncoder: GPUComputePassEncoder,
       numFixedUpdatesThisFrame: number
     ) => {
+      computePassEncoder.setBindGroup(0, simulationInfoBindGroup);
+
       for (let i = 0; i < numFixedUpdatesThisFrame; i++) {
         computePassEncoder.setPipeline(applyVelocityCmputePipeline);
         setBindGroups(computePassEncoder);

@@ -1,13 +1,18 @@
+struct SimulationInfo {
+    fixedDeltaTime: f32,
+    workgroupCount: u32,
+}
+
 struct Body {
     position: vec3f,
     velocity: vec3f,
 }
 
-const fixedDeltaTime = 0.01;
 const radius = 0.12;
 
-@group(0) @binding(0) var<storage, read> bodies: array<Body>;
-@group(1) @binding(0) var<storage, read_write> nextBodies: array<Body>;
+@group(0) @binding(0) var<uniform> simulationInfo: SimulationInfo;
+@group(1) @binding(0) var<storage, read> bodies: array<Body>;
+@group(2) @binding(0) var<storage, read_write> nextBodies: array<Body>;
 
 @compute @workgroup_size(64) fn applyVelocity(@builtin(global_invocation_id) id: vec3u) {
     let bodyIndex = id.x;
@@ -15,16 +20,16 @@ const radius = 0.12;
     var body = bodies[bodyIndex];
     var nextBody = body;
 
-//    nextBody.velocity.y -= 9.8 * fixedDeltaTime;
+//    nextBody.velocity.y -= 9.8 * simulationInfo.fixedDeltaTime;
 
     for (var i = 0u; i < 64; i++) {
         if (i != bodyIndex) {
             var otherBody = bodies[i];
-            nextBody.velocity += getGravityForce(nextBody.position, otherBody.position) * fixedDeltaTime * 0.25;
+            nextBody.velocity += getGravityForce(body.position, otherBody.position) * simulationInfo.fixedDeltaTime * 1;
         }
     }
 
-    nextBody.position += nextBody.velocity * fixedDeltaTime;
+    nextBody.position += nextBody.velocity * simulationInfo.fixedDeltaTime;
 
     nextBodies[bodyIndex] = nextBody;
 }
@@ -35,14 +40,14 @@ const radius = 0.12;
     var body = bodies[bodyIndex];
     var nextBody = body;
 
-    for (var i = 0u; i < 64; i++) {
+    for (var i = 0u; i < 64 * simulationInfo.workgroupCount; i++) {
         if (i != bodyIndex) {
             var otherBody = bodies[i];
-            var toOther = otherBody.position - nextBody.position;
+            var toOther = otherBody.position - body.position;
             var distance = length(toOther);
             if (distance < radius * 2) {
                 var normal = toOther / distance;
-                var relativeVelocity = otherBody.velocity - nextBody.velocity;
+                var relativeVelocity = otherBody.velocity - body.velocity;
                 var velocityAlongNormal = dot(relativeVelocity, normal);
 
                 if (velocityAlongNormal <= 0) {

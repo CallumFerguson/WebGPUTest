@@ -5,6 +5,7 @@ import { clamp, getDevice } from "./utility";
 import { makeShaderDataDefinitions, makeStructuredView } from "webgpu-utils";
 import { BallRenderer } from "./BallRenderer";
 import { BallComputer } from "./BallComputer";
+import { fixedDeltaTime } from "./constants";
 
 async function main() {
   const { gpu, device } = await getDevice();
@@ -118,7 +119,7 @@ async function main() {
   // );
   // renderFunctions.push(fullscreenTextureRenderer.render);
 
-  const numObjects = 64;
+  const numObjects = 64 * 40;
   const ballRenderer = new BallRenderer();
   await ballRenderer.init(
     device,
@@ -217,7 +218,7 @@ async function main() {
   document.addEventListener("wheel", (event) => {
     const sensitivity = 1.5;
     const minDist = 0.5;
-    const maxDist = 10;
+    const maxDist = 25;
     cameraPosition[2] = clamp(
       cameraPosition[2] * (1 + event.deltaY / (500 / sensitivity)),
       minDist,
@@ -226,11 +227,10 @@ async function main() {
     calculateView();
   });
 
-  const fixedUpdatesPerSecond = 100;
-  const fixedDeltaTime = 1 / fixedUpdatesPerSecond;
-  let accumulatedTime = 0;
+  const maxFixedUpdatesPerFrame = 10;
 
   let previousTime = 0;
+  let accumulatedTime = 0;
   async function render(currentTime: number) {
     currentTime *= 0.001;
     const deltaTime = currentTime - previousTime;
@@ -262,12 +262,24 @@ async function main() {
 
     let numFixedUpdatesThisFrame = 0;
     while (accumulatedTime >= fixedDeltaTime) {
+      if (numFixedUpdatesThisFrame >= maxFixedUpdatesPerFrame) {
+        console.log(
+          "numFixedUpdatesThisFrame exceeded maxFixedUpdatesPerFrame."
+        );
+        break;
+      }
       numFixedUpdatesThisFrame++;
       fixedUpdateFunctions.forEach((fixedUpdateFunction) => {
         fixedUpdateFunction(fixedDeltaTime);
       });
       accumulatedTime -= fixedDeltaTime;
     }
+    if (accumulatedTime >= fixedDeltaTime) {
+      console.log(
+        `simulation is ${accumulatedTime - fixedDeltaTime} seconds behind`
+      );
+    }
+    // console.log(numFixedUpdatesThisFrame);
 
     timeData.set({
       deltaTime: Math.min(deltaTime, 0.01),
