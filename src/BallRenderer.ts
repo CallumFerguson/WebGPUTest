@@ -19,7 +19,7 @@ export class BallRenderer {
     let bodyInfoArrayBufferView = new Float32Array(bodyInfoArrayBuffer);
 
     // const sideLength = Math.ceil(Math.cbrt(numObjects));
-    const sideLength = 10;
+    const sideLength = 5;
     const height = Math.ceil(numObjects / (sideLength * sideLength));
     const spacing = 1.5;
     const startPositions = [];
@@ -31,7 +31,7 @@ export class BallRenderer {
           }
           startPositions.push([
             x * spacing - (sideLength * spacing) / 2 + Math.random() * 0.01,
-            y * spacing + 10 + Math.random() * 0.01,
+            y * spacing + 250 + Math.random() * 0.01,
             z * spacing - (sideLength * spacing) / 2 + Math.random() * 0.01,
           ]);
         }
@@ -49,6 +49,7 @@ export class BallRenderer {
       // bodyInfoArrayBufferView[i * 12 + 4] = Math.random() - 0.5;
       // bodyInfoArrayBufferView[i * 12 + 4 + 1] = Math.random() - 0.5;
       // bodyInfoArrayBufferView[i * 12 + 4 + 2] = Math.random() - 0.5;
+      bodyInfoArrayBufferView[i * 12 + 4 + 1] = -200;
 
       // color
       bodyInfoArrayBufferView[i * 12 + 8] = Math.random() * 0.8 + 0.2;
