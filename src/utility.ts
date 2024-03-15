@@ -5,6 +5,11 @@ export type BufferBundle = {
   bindGroups: GPUBindGroup[];
 };
 
+export type Bounds = {
+  size: [number, number, number];
+  center: [number, number, number];
+};
+
 export async function getDevice(): Promise<{ gpu: GPU; device: GPUDevice }> {
   const gpu = navigator.gpu;
   if (!gpu) {

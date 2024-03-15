@@ -1,5 +1,7 @@
 struct SimulationInfo {
+    boundsSize: vec3f,
     fixedDeltaTime: f32,
+    boundsCenter: vec3f,
     workgroupCount: u32,
 }
 
@@ -35,7 +37,8 @@ struct Body {
     var body = bodies[bodyIndex];
     var nextBody = body;
 
-    var distInGround = -(body.position.y - body.radius);
+    var groundHeight = simulationInfo.boundsCenter.y - simulationInfo.boundsSize.y / 2;
+    var distInGround = -(body.position.y - body.radius - groundHeight);
     var inGround = step(0, distInGround);
     nextBody.position.y += inGround * distInGround;
     nextBody.velocity.y += inGround * ((-nextBody.velocity.y * body.restitution) - nextBody.velocity.y);

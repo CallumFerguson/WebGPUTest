@@ -1,11 +1,12 @@
 import pointParticleShaderString from "../shaders/pointParticle.wgsl?raw";
 import computeParticleShaderString from "../shaders/computeParticle.wgsl?raw";
 import { mat4, vec3, quat } from "gl-matrix";
-import { clamp, getDevice } from "./utility";
+import { Bounds, clamp, getDevice } from "./utility";
 import { makeShaderDataDefinitions, makeStructuredView } from "webgpu-utils";
 import { BallRenderer } from "./BallRenderer";
 import { BallComputer } from "./BallComputer";
 import { fixedDeltaTime } from "./constants";
+import { BoundsRenderer } from "./BoundsRenderer";
 
 async function main() {
   const { gpu, device } = await getDevice();
@@ -125,6 +126,8 @@ async function main() {
   // );
   // renderFunctions.push(fullscreenTextureRenderer.render);
 
+  const bounds: Bounds = { size: [50, 50, 50], center: [0, 0, 0] };
+
   const numObjects = 64 * 300;
   const ballRenderer = new BallRenderer();
   await ballRenderer.init(
@@ -139,9 +142,18 @@ async function main() {
   const ballComputer = new BallComputer(
     device,
     ballRenderer.positionBufferBundles,
-    numObjects
+    numObjects,
+    bounds
   );
   computeFunctions.push(ballComputer.compute);
+
+  const boundsRenderer = new BoundsRenderer(
+    device,
+    presentationFormat,
+    cameraDataBuffer,
+    ballComputer.simulationInfoBuffer
+  );
+  renderFunctions.push(boundsRenderer.render);
 
   function resizeCanvasIfNeeded(): boolean {
     const width = Math.max(

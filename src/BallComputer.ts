@@ -1,9 +1,11 @@
 import computeBallPhysicsShaderString from "../shaders/computeBallPhysics.wgsl?raw";
-import { BufferBundle } from "./utility";
+import { Bounds, BufferBundle } from "./utility";
 import { makeShaderDataDefinitions, makeStructuredView } from "webgpu-utils";
 import { fixedDeltaTime } from "./constants";
 
 export class BallComputer {
+  simulationInfoBuffer: GPUBuffer;
+
   compute: (
     computePassEncoder: GPUComputePassEncoder,
     numFixedUpdatesThisFrame: number
@@ -12,7 +14,8 @@ export class BallComputer {
   constructor(
     device: GPUDevice,
     positionBufferBundles: BufferBundle[],
-    numObjects: number
+    numObjects: number,
+    bounds: Bounds
   ) {
     const computeShaderModule = device.createShaderModule({
       code: computeBallPhysicsShaderString,
@@ -74,7 +77,7 @@ export class BallComputer {
 
     const defs = makeShaderDataDefinitions(computeBallPhysicsShaderString);
     const simulationInfo = makeStructuredView(defs.uniforms.simulationInfo);
-    const simulationInfoBuffer = device.createBuffer({
+    this.simulationInfoBuffer = device.createBuffer({
       size: simulationInfo.arrayBuffer.byteLength,
       usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
     });
@@ -90,16 +93,20 @@ export class BallComputer {
     simulationInfo.set({
       fixedDeltaTime,
       workgroupCount,
+      boundsSize: bounds.size,
+      boundsCenter: bounds.center,
     });
     device.queue.writeBuffer(
-      simulationInfoBuffer,
+      this.simulationInfoBuffer,
       0,
       simulationInfo.arrayBuffer
     );
 
     const simulationInfoBindGroup = device.createBindGroup({
       layout: computeBindGroupLayout0,
-      entries: [{ binding: 0, resource: { buffer: simulationInfoBuffer } }],
+      entries: [
+        { binding: 0, resource: { buffer: this.simulationInfoBuffer } },
+      ],
     });
 
     positionBufferBundles[0].bindGroups.push(
