@@ -64,6 +64,8 @@ struct Body {
         }
     }
 
+    body = nextBody;
+
     var boundsMin = simulationInfo.boundsCenter - simulationInfo.boundsSize / 2;
     var boundsMax = simulationInfo.boundsCenter + simulationInfo.boundsSize / 2;
 
