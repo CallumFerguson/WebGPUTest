@@ -50,7 +50,7 @@ async function main() {
 
   let cameraModel = mat4.create();
   let cameraRotation = quat.create();
-  let cameraPosition = vec3.fromValues(0, 0, 40);
+  let cameraPosition = vec3.fromValues(0, 0, 60);
 
   let view = mat4.create();
   calculateView();
@@ -78,7 +78,13 @@ async function main() {
 
   let projection = mat4.create();
   function calculateProjection() {
-    mat4.perspectiveZO(projection, 90, canvas.width / canvas.height, 0.01, 100);
+    mat4.perspectiveZO(
+      projection,
+      90,
+      canvas.width / canvas.height,
+      0.01,
+      1000
+    );
   }
   calculateProjection();
 
@@ -119,7 +125,7 @@ async function main() {
   // );
   // renderFunctions.push(fullscreenTextureRenderer.render);
 
-  const numObjects = 64 * 50;
+  const numObjects = 64 * 300;
   const ballRenderer = new BallRenderer();
   await ballRenderer.init(
     device,
@@ -218,7 +224,7 @@ async function main() {
   document.addEventListener("wheel", (event) => {
     const sensitivity = 1.5;
     const minDist = 0.5;
-    const maxDist = 50;
+    const maxDist = 100;
     cameraPosition[2] = clamp(
       cameraPosition[2] * (1 + event.deltaY / (500 / sensitivity)),
       minDist,

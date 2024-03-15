@@ -18,19 +18,21 @@ export class BallRenderer {
     let bodyInfoArrayBuffer = new ArrayBuffer(numObjects * 16 * 3);
     let bodyInfoArrayBufferView = new Float32Array(bodyInfoArrayBuffer);
 
-    const sideLength = Math.ceil(Math.cbrt(numObjects));
-    const spacing = 3;
+    // const sideLength = Math.ceil(Math.cbrt(numObjects));
+    const sideLength = 10;
+    const height = Math.ceil(numObjects / (sideLength * sideLength));
+    const spacing = 1.5;
     const startPositions = [];
     for (let z = sideLength - 1; z >= 0; z--) {
-      for (let y = 0; y < sideLength; y++) {
+      for (let y = 0; y < height; y++) {
         for (let x = 0; x < sideLength; x++) {
           if (startPositions.length == numObjects) {
             break;
           }
           startPositions.push([
-            x * spacing - (sideLength * spacing) / 2,
-            y * spacing - (sideLength * spacing) / 2,
-            z * spacing - (sideLength * spacing) / 2,
+            x * spacing - (sideLength * spacing) / 2 + Math.random() * 0.01,
+            y * spacing + 10 + Math.random() * 0.01,
+            z * spacing - (sideLength * spacing) / 2 + Math.random() * 0.01,
           ]);
         }
       }
@@ -44,9 +46,9 @@ export class BallRenderer {
       bodyInfoArrayBufferView[i * 12 + 2] = startPositions[i][2];
 
       // velocity
-      bodyInfoArrayBufferView[i * 12 + 4] = Math.random() - 0.5;
-      bodyInfoArrayBufferView[i * 12 + 4 + 1] = Math.random() - 0.5;
-      bodyInfoArrayBufferView[i * 12 + 4 + 2] = Math.random() - 0.5;
+      // bodyInfoArrayBufferView[i * 12 + 4] = Math.random() - 0.5;
+      // bodyInfoArrayBufferView[i * 12 + 4 + 1] = Math.random() - 0.5;
+      // bodyInfoArrayBufferView[i * 12 + 4 + 2] = Math.random() - 0.5;
 
       // color
       bodyInfoArrayBufferView[i * 12 + 8] = Math.random() * 0.8 + 0.2;
@@ -54,13 +56,15 @@ export class BallRenderer {
       bodyInfoArrayBufferView[i * 12 + 8 + 2] = Math.random() * 0.8 + 0.2;
 
       // radius
-      bodyInfoArrayBufferView[i * 12 + 3] = 0.1 + Math.random(); // 0.12
+      const radius = 0.1 + Math.random();
+      bodyInfoArrayBufferView[i * 12 + 3] = radius; // 0.12 for basketball sized sphere
 
       // restitution
       bodyInfoArrayBufferView[i * 12 + 7] = 0;
 
       // mass
-      bodyInfoArrayBufferView[i * 12 + 11] = 1;
+      bodyInfoArrayBufferView[i * 12 + 11] =
+        (4 / 3) * Math.PI * (radius * radius * radius); // mass is just volume
     }
 
     // bodyInfoArrayBufferView[0] = 0;

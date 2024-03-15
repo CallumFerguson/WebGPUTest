@@ -22,15 +22,7 @@ struct Body {
     var body = bodies[bodyIndex];
     var nextBody = body;
 
-//    nextBody.velocity.y -= 9.8 * simulationInfo.fixedDeltaTime;
-
-    for (var i = 0u; i < 64; i++) {
-        if (i != bodyIndex) {
-            var otherBody = bodies[i];
-            // TODO: take mass into account + put correct mass in body info on init
-            nextBody.velocity += getGravityForce(body.position, otherBody.position) * simulationInfo.fixedDeltaTime * 1;
-        }
-    }
+    nextBody.velocity.y -= 9.8 * simulationInfo.fixedDeltaTime;
 
     nextBody.position += nextBody.velocity * simulationInfo.fixedDeltaTime;
 
@@ -42,6 +34,11 @@ struct Body {
 
     var body = bodies[bodyIndex];
     var nextBody = body;
+
+    var distInGround = -(body.position.y - body.radius);
+    var inGround = step(0, distInGround);
+    nextBody.position.y += inGround * distInGround;
+    nextBody.velocity.y += inGround * ((-nextBody.velocity.y * body.restitution) - nextBody.velocity.y);
 
     for (var i = 0u; i < 64 * simulationInfo.workgroupCount; i++) {
         if (i != bodyIndex) {
