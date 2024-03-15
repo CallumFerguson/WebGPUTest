@@ -3,6 +3,7 @@ struct SimulationInfo {
     fixedDeltaTime: f32,
     boundsCenter: vec3f,
     workgroupCount: u32,
+    collisionResolveStepMultiplier: f32,
 }
 
 struct Body {
@@ -56,10 +57,10 @@ struct Body {
                     j /= 2;
 
                     var impulse = normal * j;
-                    nextBody.velocity -= impulse * (1 / body.mass);
+                    nextBody.velocity -= impulse * (1 / body.mass) * simulationInfo.collisionResolveStepMultiplier;
                 }
 
-                nextBody.position -= toOther * ((body.radius + otherBody.radius) - distance) * 0.5;
+                nextBody.position -= (toOther * ((body.radius + otherBody.radius) - distance) * 0.5) * simulationInfo.collisionResolveStepMultiplier;
             }
         }
     }
@@ -72,14 +73,14 @@ struct Body {
     for (var i = 0; i < 3; i++) {
         var distInLowerBounds = -(body.position[i] - body.radius - boundsMin[i]);
         var inLowerBounds = step(0, distInLowerBounds);
-        nextBody.position[i] += inLowerBounds * distInLowerBounds;
-        nextBody.velocity[i] += inLowerBounds * ((-nextBody.velocity[i] * body.restitution) - nextBody.velocity[i]);
+        nextBody.position[i] += (inLowerBounds * distInLowerBounds);
+        nextBody.velocity[i] += (inLowerBounds * ((-nextBody.velocity[i] * body.restitution) - nextBody.velocity[i]));
 
         if (i != 1) {
             var distInUpperBounds = body.position[i] + body.radius - boundsMax[i];
             var inUpperBounds = step(0, distInUpperBounds);
-            nextBody.position[i] -= inUpperBounds * distInUpperBounds;
-            nextBody.velocity[i] += inUpperBounds * ((-nextBody.velocity[i] * body.restitution) - nextBody.velocity[i]);
+            nextBody.position[i] -= (inUpperBounds * distInUpperBounds);
+            nextBody.velocity[i] += (inUpperBounds * ((-nextBody.velocity[i] * body.restitution) - nextBody.velocity[i]));
         }
     }
 

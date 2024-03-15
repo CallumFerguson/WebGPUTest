@@ -128,7 +128,7 @@ async function main() {
 
   const bounds: Bounds = { size: [50, 50, 50], center: [0, 0, 0] };
 
-  const numObjects = 64 * 300;
+  const numObjects = 64 * 100;
   const ballRenderer = new BallRenderer();
   await ballRenderer.init(
     device,

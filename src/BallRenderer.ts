@@ -56,7 +56,7 @@ export class BallRenderer {
       bodyInfoArrayBufferView[i * 12 + 8 + 2] = Math.random() * 0.8 + 0.2;
 
       // radius
-      const radius = 0.1 + Math.random();
+      const radius = 0.5 + Math.random();
       bodyInfoArrayBufferView[i * 12 + 3] = radius; // 0.12 for basketball sized sphere
 
       // restitution

@@ -1,7 +1,7 @@
 import computeBallPhysicsShaderString from "../shaders/computeBallPhysics.wgsl?raw";
 import { Bounds, BufferBundle } from "./utility";
 import { makeShaderDataDefinitions, makeStructuredView } from "webgpu-utils";
-import { fixedDeltaTime } from "./constants";
+import { collisionResolveSteps, fixedDeltaTime } from "./constants";
 
 export class BallComputer {
   simulationInfoBuffer: GPUBuffer;
@@ -95,6 +95,7 @@ export class BallComputer {
       workgroupCount,
       boundsSize: bounds.size,
       boundsCenter: bounds.center,
+      collisionResolveStepMultiplier: 1 / collisionResolveSteps,
     });
     device.queue.writeBuffer(
       this.simulationInfoBuffer,
@@ -175,10 +176,12 @@ export class BallComputer {
         computePassEncoder.dispatchWorkgroups(workgroupCount);
         swapBuffers();
 
-        computePassEncoder.setPipeline(handleCollisionsComputePipeline);
-        setBindGroups(computePassEncoder);
-        computePassEncoder.dispatchWorkgroups(workgroupCount);
-        swapBuffers();
+        for (let n = 0; n < collisionResolveSteps; n++) {
+          computePassEncoder.setPipeline(handleCollisionsComputePipeline);
+          setBindGroups(computePassEncoder);
+          computePassEncoder.dispatchWorkgroups(workgroupCount);
+          swapBuffers();
+        }
       }
     };
   }

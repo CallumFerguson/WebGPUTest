@@ -8,6 +8,7 @@ struct SimulationInfo {
     fixedDeltaTime: f32,
     boundsCenter: vec3f,
     workgroupCount: u32,
+    collisionResolveStepMultiplier: f32,
 }
 
 @group(0) @binding(0) var<uniform> cameraData: CameraData;
