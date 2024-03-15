@@ -37,12 +37,6 @@ struct Body {
     var body = bodies[bodyIndex];
     var nextBody = body;
 
-    var groundHeight = simulationInfo.boundsCenter.y - simulationInfo.boundsSize.y / 2;
-    var distInGround = -(body.position.y - body.radius - groundHeight);
-    var inGround = step(0, distInGround);
-    nextBody.position.y += inGround * distInGround;
-    nextBody.velocity.y += inGround * ((-nextBody.velocity.y * body.restitution) - nextBody.velocity.y);
-
     for (var i = 0u; i < 64 * simulationInfo.workgroupCount; i++) {
         if (i != bodyIndex) {
             var otherBody = bodies[i];
@@ -67,6 +61,23 @@ struct Body {
 
                 nextBody.position -= toOther * ((body.radius + otherBody.radius) - distance) * 0.5;
             }
+        }
+    }
+
+    var boundsMin = simulationInfo.boundsCenter - simulationInfo.boundsSize / 2;
+    var boundsMax = simulationInfo.boundsCenter + simulationInfo.boundsSize / 2;
+
+    for (var i = 0; i < 3; i++) {
+        var distInLowerBounds = -(body.position[i] - body.radius - boundsMin[i]);
+        var inLowerBounds = step(0, distInLowerBounds);
+        nextBody.position[i] += inLowerBounds * distInLowerBounds;
+        nextBody.velocity[i] += inLowerBounds * ((-nextBody.velocity[i] * body.restitution) - nextBody.velocity[i]);
+
+        if (i != 1) {
+            var distInUpperBounds = body.position[i] + body.radius - boundsMax[i];
+            var inUpperBounds = step(0, distInUpperBounds);
+            nextBody.position[i] -= inUpperBounds * distInUpperBounds;
+            nextBody.velocity[i] += inUpperBounds * ((-nextBody.velocity[i] * body.restitution) - nextBody.velocity[i]);
         }
     }
 
