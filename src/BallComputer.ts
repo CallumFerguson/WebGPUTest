@@ -2,6 +2,7 @@ import computeBallPhysicsShaderString from "../shaders/computeBallPhysics.wgsl?r
 import { Bounds, BufferBundle } from "./utility";
 import { makeShaderDataDefinitions, makeStructuredView } from "webgpu-utils";
 import { collisionResolveSteps, fixedDeltaTime } from "./constants";
+import { mat4 } from "gl-matrix";
 
 export class BallComputer {
   simulationInfoBuffer: GPUBuffer;
@@ -90,12 +91,16 @@ export class BallComputer {
       );
     }
 
+    const rotationInverse = mat4.create();
+    mat4.invert(rotationInverse, bounds.rotation);
     simulationInfo.set({
       fixedDeltaTime,
       workgroupCount,
       boundsSize: bounds.size,
       boundsCenter: bounds.center,
       collisionResolveStepMultiplier: 1 / collisionResolveSteps,
+      boundsRotation: bounds.rotation,
+      boundsRotationInverse: rotationInverse,
     });
     device.queue.writeBuffer(
       this.simulationInfoBuffer,

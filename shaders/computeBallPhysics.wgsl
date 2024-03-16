@@ -4,6 +4,8 @@ struct SimulationInfo {
     boundsCenter: vec3f,
     workgroupCount: u32,
     collisionResolveStepMultiplier: f32,
+    boundsRotation: mat4x4f,
+    boundsRotationInverse: mat4x4f,
 }
 
 struct Body {
@@ -69,6 +71,8 @@ struct Body {
 
     var boundsMin = simulationInfo.boundsCenter - simulationInfo.boundsSize / 2;
     var boundsMax = simulationInfo.boundsCenter + simulationInfo.boundsSize / 2;
+
+    var bodyLocalPosition = simulationInfo.boundsRotation * vec4(body.position, 1);
 
     for (var i = 0; i < 3; i++) {
         var distInLowerBounds = -(body.position[i] - body.radius - boundsMin[i]);

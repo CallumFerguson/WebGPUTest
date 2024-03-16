@@ -1,4 +1,4 @@
-import { vec3 } from "gl-matrix";
+import { mat4, vec3 } from "gl-matrix";
 
 export type BufferBundle = {
   buffer: GPUBuffer;
@@ -8,6 +8,7 @@ export type BufferBundle = {
 export type Bounds = {
   size: [number, number, number];
   center: [number, number, number];
+  rotation: mat4;
 };
 
 export async function getDevice(): Promise<{ gpu: GPU; device: GPUDevice }> {

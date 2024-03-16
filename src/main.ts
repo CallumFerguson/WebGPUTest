@@ -126,9 +126,15 @@ async function main() {
   // );
   // renderFunctions.push(fullscreenTextureRenderer.render);
 
-  const bounds: Bounds = { size: [50, 50, 50], center: [0, 0, 0] };
+  const rotation = mat4.create();
+  mat4.rotateZ(rotation, rotation, -((Math.PI / 180) * 45) / 2);
+  const bounds: Bounds = {
+    size: [50, 50, 50],
+    center: [0, 0, 0],
+    rotation,
+  };
 
-  const numObjects = 64 * 100;
+  const numObjects = 64 * 2; // 100
   const ballRenderer = new BallRenderer();
   await ballRenderer.init(
     device,
