@@ -34,7 +34,8 @@ async function main() {
     [];
   const computeFunctions: ((
     computePassEncoder: GPUComputePassEncoder,
-    numFixedUpdatesThisFrame: number
+    numFixedUpdatesThisFrame: number,
+    currentTime: number
   ) => void)[] = [];
   const renderPassFunctions: ((commandEncoder: GPUCommandEncoder) => void)[] =
     [];
@@ -51,7 +52,7 @@ async function main() {
 
   let cameraModel = mat4.create();
   let cameraRotation = quat.create();
-  let cameraPosition = vec3.fromValues(0, 0, 60);
+  let cameraPosition = vec3.fromValues(0, 0, 75);
 
   let view = mat4.create();
   calculateView();
@@ -127,14 +128,15 @@ async function main() {
   // renderFunctions.push(fullscreenTextureRenderer.render);
 
   const rotation = mat4.create();
-  mat4.rotateZ(rotation, rotation, -((Math.PI / 180) * 45) / 2);
+  // mat4.rotateZ(rotation, rotation, -((Math.PI / 180) * 45) / 2);
+  // mat4.rotateX(rotation, rotation, -((Math.PI / 180) * 45) / 2);
   const bounds: Bounds = {
     size: [50, 50, 50],
     center: [0, 0, 0],
     rotation,
   };
 
-  const numObjects = 64 * 2; // 100
+  const numObjects = 64 * 50; // 100
   const ballRenderer = new BallRenderer();
   await ballRenderer.init(
     device,
@@ -230,19 +232,28 @@ async function main() {
     mouseY = event.clientY;
   });
 
-  let mouseDown = false;
-  document.addEventListener("mousedown", () => {
-    mouseDown = true;
+  let leftMouseDown = false;
+  let rightMouseDown = false;
+  document.addEventListener("mousedown", (event) => {
+    if (event.button === 0) {
+      leftMouseDown = true;
+    } else if (event.button === 2) {
+      rightMouseDown = true;
+    }
   });
 
-  document.addEventListener("mouseup", () => {
-    mouseDown = false;
+  document.addEventListener("mouseup", (event) => {
+    if (event.button === 0) {
+      leftMouseDown = false;
+    } else if (event.button === 2) {
+      rightMouseDown = false;
+    }
   });
 
   document.addEventListener("wheel", (event) => {
     const sensitivity = 1.5;
     const minDist = 0.5;
-    const maxDist = 100;
+    const maxDist = 250;
     cameraPosition[2] = clamp(
       cameraPosition[2] * (1 + event.deltaY / (500 / sensitivity)),
       minDist,
@@ -267,22 +278,48 @@ async function main() {
 
     handleCanvasResize();
 
-    if (mouseDown && (mouseDeltaX !== 0 || mouseDeltaY !== 0)) {
-      const sensitivity = 0.5;
-      quat.rotateY(
-        cameraParentXRotation,
-        cameraParentXRotation,
-        (Math.PI / 180) * mouseDeltaX * sensitivity
-      );
+    if (mouseDeltaX !== 0 || mouseDeltaY !== 0) {
+      if (leftMouseDown) {
+        const sensitivity = 0.5;
+        quat.rotateY(
+          cameraParentXRotation,
+          cameraParentXRotation,
+          (Math.PI / 180) * mouseDeltaX * sensitivity
+        );
 
-      cameraParentYEuler = clamp(
-        cameraParentYEuler + mouseDeltaY * sensitivity,
-        -89.9,
-        89.9
-      );
-      quat.fromEuler(cameraParentYRotation, cameraParentYEuler, 0, 0);
+        cameraParentYEuler = clamp(
+          cameraParentYEuler + mouseDeltaY * sensitivity,
+          -89.9,
+          89.9
+        );
+        quat.fromEuler(cameraParentYRotation, cameraParentYEuler, 0, 0);
 
-      calculateView();
+        calculateView();
+      } else if (rightMouseDown) {
+        // const sensitivity = 0.5;
+        // // mat4.rotateY(
+        // //   bounds.rotation,
+        // //   bounds.rotation,
+        // //   mouseDeltaX * sensitivity
+        // // );
+        // const rotateBy = mat4.create();
+        // mat4.rotateY(
+        //   rotateBy,
+        //   rotateBy,
+        //   (Math.PI / 180) * -mouseDeltaX * sensitivity
+        // );
+        // mat4.mul(bounds.rotation, rotateBy, bounds.rotation);
+        //
+        // mat4.identity(rotateBy);
+        // mat4.rotateX(
+        //   rotateBy,
+        //   rotateBy,
+        //   (Math.PI / 180) * -mouseDeltaY * sensitivity
+        // );
+        // mat4.mul(bounds.rotation, rotateBy, bounds.rotation);
+        //
+        // ballComputer.updateBounds();
+      }
     }
 
     let numFixedUpdatesThisFrame = 0;
@@ -345,7 +382,11 @@ async function main() {
     const computePassEncoder = commandEncoder.beginComputePass();
 
     computeFunctions.forEach((computeFunction) => {
-      computeFunction(computePassEncoder, numFixedUpdatesThisFrame);
+      computeFunction(
+        computePassEncoder,
+        numFixedUpdatesThisFrame,
+        currentTime
+      );
     });
 
     computePassEncoder.end();

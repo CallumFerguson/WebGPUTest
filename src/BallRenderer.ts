@@ -49,7 +49,7 @@ export class BallRenderer {
       // bodyInfoArrayBufferView[i * 12 + 4] = Math.random() - 0.5;
       // bodyInfoArrayBufferView[i * 12 + 4 + 1] = Math.random() - 0.5;
       // bodyInfoArrayBufferView[i * 12 + 4 + 2] = Math.random() - 0.5;
-      bodyInfoArrayBufferView[i * 12 + 4 + 1] = -200;
+      // bodyInfoArrayBufferView[i * 12 + 4 + 1] = -200;
 
       // color
       bodyInfoArrayBufferView[i * 12 + 8] = Math.random() * 0.8 + 0.2;

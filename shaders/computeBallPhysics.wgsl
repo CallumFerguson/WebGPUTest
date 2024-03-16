@@ -69,24 +69,37 @@ struct Body {
 
     body = nextBody;
 
-    var boundsMin = simulationInfo.boundsCenter - simulationInfo.boundsSize / 2;
-    var boundsMax = simulationInfo.boundsCenter + simulationInfo.boundsSize / 2;
+    var boundsMin = -simulationInfo.boundsSize / 2;
+    var boundsMax = simulationInfo.boundsSize / 2;
 
-    var bodyLocalPosition = simulationInfo.boundsRotation * vec4(body.position, 1);
+    var bodyLocalPosition = (simulationInfo.boundsRotationInverse * vec4(body.position - simulationInfo.boundsCenter, 1)).xyz;
+    var newBodyLocalPosition = bodyLocalPosition;
+
+    var bodyLocalVelocity = (simulationInfo.boundsRotationInverse * vec4(body.velocity, 1)).xyz;
+    var newBodyLocalVelocity = bodyLocalVelocity;
 
     for (var i = 0; i < 3; i++) {
-        var distInLowerBounds = -(body.position[i] - body.radius - boundsMin[i]);
+        // lower bounds
+        var distInLowerBounds = -(bodyLocalPosition[i] - body.radius - boundsMin[i]);
         var inLowerBounds = step(0, distInLowerBounds);
-        nextBody.position[i] += (inLowerBounds * distInLowerBounds);
-        nextBody.velocity[i] += (inLowerBounds * ((-nextBody.velocity[i] * body.restitution) - nextBody.velocity[i]));
 
-        if (i != 1) {
-            var distInUpperBounds = body.position[i] + body.radius - boundsMax[i];
-            var inUpperBounds = step(0, distInUpperBounds);
-            nextBody.position[i] -= (inUpperBounds * distInUpperBounds);
-            nextBody.velocity[i] += (inUpperBounds * ((-nextBody.velocity[i] * body.restitution) - nextBody.velocity[i]));
-        }
+        newBodyLocalPosition[i] += inLowerBounds * distInLowerBounds;
+
+        var newVelocityForLowerCollision = -newBodyLocalVelocity[i] * body.restitution;
+        newBodyLocalVelocity[i] += inLowerBounds * (newVelocityForLowerCollision - newBodyLocalVelocity[i]);
+
+        // upper bounds
+        var distInUpperBounds = bodyLocalPosition[i] + body.radius - boundsMax[i];
+        var inUpperBounds = step(0, distInUpperBounds);
+
+        newBodyLocalPosition[i] -= inUpperBounds * distInUpperBounds;
+
+        var newVelocityForUpperCollision = -newBodyLocalVelocity[i] * body.restitution;
+        newBodyLocalVelocity[i] += inUpperBounds * (newVelocityForUpperCollision - newBodyLocalVelocity[i]);
     }
+
+    nextBody.position = (simulationInfo.boundsRotation * vec4(newBodyLocalPosition, 1)).xyz + simulationInfo.boundsCenter;
+    nextBody.velocity = (simulationInfo.boundsRotation * vec4(newBodyLocalVelocity, 1)).xyz;
 
     nextBodies[bodyIndex] = nextBody;
 }

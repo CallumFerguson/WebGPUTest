@@ -6,10 +6,12 @@ import { mat4 } from "gl-matrix";
 
 export class BallComputer {
   simulationInfoBuffer: GPUBuffer;
+  updateBounds: () => void;
 
   compute: (
     computePassEncoder: GPUComputePassEncoder,
-    numFixedUpdatesThisFrame: number
+    numFixedUpdatesThisFrame: number,
+    currentTime: number
   ) => void;
 
   constructor(
@@ -91,22 +93,29 @@ export class BallComputer {
       );
     }
 
-    const rotationInverse = mat4.create();
-    mat4.invert(rotationInverse, bounds.rotation);
     simulationInfo.set({
       fixedDeltaTime,
       workgroupCount,
-      boundsSize: bounds.size,
-      boundsCenter: bounds.center,
       collisionResolveStepMultiplier: 1 / collisionResolveSteps,
-      boundsRotation: bounds.rotation,
-      boundsRotationInverse: rotationInverse,
     });
-    device.queue.writeBuffer(
-      this.simulationInfoBuffer,
-      0,
-      simulationInfo.arrayBuffer
-    );
+
+    const simulationInfoBuffer = this.simulationInfoBuffer;
+    this.updateBounds = () => {
+      const rotationInverse = mat4.create();
+      mat4.invert(rotationInverse, bounds.rotation);
+      simulationInfo.set({
+        boundsSize: bounds.size,
+        boundsCenter: bounds.center,
+        boundsRotation: bounds.rotation,
+        boundsRotationInverse: rotationInverse,
+      });
+      device.queue.writeBuffer(
+        simulationInfoBuffer,
+        0,
+        simulationInfo.arrayBuffer
+      );
+    };
+    this.updateBounds();
 
     const simulationInfoBindGroup = device.createBindGroup({
       layout: computeBindGroupLayout0,
@@ -174,6 +183,20 @@ export class BallComputer {
       numFixedUpdatesThisFrame: number
     ) => {
       computePassEncoder.setBindGroup(0, simulationInfoBindGroup);
+
+      // mat4.rotateX(
+      //   bounds.rotation,
+      //   bounds.rotation,
+      //   (Math.PI / 180) * -20 * fixedDeltaTime
+      // );
+      const rotateBy = mat4.create();
+      mat4.rotateZ(rotateBy, rotateBy, (Math.PI / 180) * -20 * fixedDeltaTime);
+      mat4.mul(bounds.rotation, rotateBy, bounds.rotation);
+      //
+      // bounds.center[0] = Math.cos(currentTime * 0.25) * 50;
+      // bounds.center[1] = Math.sin(currentTime * 0.25) * 50;
+
+      this.updateBounds();
 
       for (let i = 0; i < numFixedUpdatesThisFrame; i++) {
         computePassEncoder.setPipeline(applyVelocityCmputePipeline);
