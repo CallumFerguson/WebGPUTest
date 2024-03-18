@@ -7,6 +7,7 @@ import { BallRenderer } from "./BallRenderer";
 import { BallComputer } from "./BallComputer";
 import { fixedDeltaTime } from "./constants";
 import { BoundsRenderer } from "./BoundsRenderer";
+import { CubeMapRenderer } from "./CubeMapRenderer";
 
 async function main() {
   const { gpu, device } = await getDevice();
@@ -127,41 +128,45 @@ async function main() {
   // );
   // renderFunctions.push(fullscreenTextureRenderer.render);
 
-  const rotation = mat4.create();
+  // const rotation = mat4.create();
   // mat4.rotateZ(rotation, rotation, -((Math.PI / 180) * 45) / 2);
   // mat4.rotateX(rotation, rotation, -((Math.PI / 180) * 45) / 2);
-  const bounds: Bounds = {
-    size: [50, 50, 50],
-    center: [0, 0, 0],
-    rotation,
-  };
+  // const bounds: Bounds = {
+  //   size: [50, 50, 50],
+  //   center: [0, 0, 0],
+  //   rotation,
+  // };
 
-  const numObjects = 64 * 50; // 100
-  const ballRenderer = new BallRenderer();
-  await ballRenderer.init(
-    device,
-    presentationFormat,
-    cameraDataBuffer,
-    numObjects
-  );
-  fixedUpdateFunctions.push(ballRenderer.fixedUpdate);
-  renderFunctions.push(ballRenderer.render);
+  // const numObjects = 64 * 5; // 50
+  // const ballRenderer = new BallRenderer();
+  // await ballRenderer.init(
+  //   device,
+  //   presentationFormat,
+  //   cameraDataBuffer,
+  //   numObjects
+  // );
+  // fixedUpdateFunctions.push(ballRenderer.fixedUpdate);
+  // renderFunctions.push(ballRenderer.render);
+  //
+  // const ballComputer = new BallComputer(
+  //   device,
+  //   ballRenderer.positionBufferBundles,
+  //   numObjects,
+  //   bounds
+  // );
+  // computeFunctions.push(ballComputer.compute);
+  //
+  // const boundsRenderer = new BoundsRenderer(
+  //   device,
+  //   presentationFormat,
+  //   cameraDataBuffer,
+  //   ballComputer.simulationInfoBuffer
+  // );
+  // renderFunctions.push(boundsRenderer.render);
 
-  const ballComputer = new BallComputer(
-    device,
-    ballRenderer.positionBufferBundles,
-    numObjects,
-    bounds
-  );
-  computeFunctions.push(ballComputer.compute);
-
-  const boundsRenderer = new BoundsRenderer(
-    device,
-    presentationFormat,
-    cameraDataBuffer,
-    ballComputer.simulationInfoBuffer
-  );
-  renderFunctions.push(boundsRenderer.render);
+  const cubeMapRenderer = new CubeMapRenderer();
+  await cubeMapRenderer.init(device, presentationFormat, cameraDataBuffer);
+  renderFunctions.push(cubeMapRenderer.render!);
 
   function resizeCanvasIfNeeded(): boolean {
     const width = Math.max(
