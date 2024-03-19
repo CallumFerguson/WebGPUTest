@@ -79,9 +79,9 @@ async function main() {
     mat4.mul(cameraModel, cameraParentXModel, cameraModel);
 
     cameraWorldPositionVec4[0] = 0;
-    cameraWorldPositionVec4[0] = 0;
-    cameraWorldPositionVec4[0] = 0;
-    cameraWorldPositionVec4[0] = 1;
+    cameraWorldPositionVec4[1] = 0;
+    cameraWorldPositionVec4[2] = 0;
+    cameraWorldPositionVec4[3] = 1;
     vec4.transformMat4(
       cameraWorldPositionVec4,
       cameraWorldPositionVec4,
@@ -302,6 +302,8 @@ async function main() {
     calculateView();
   });
 
+  const objectModelTmp = mat4.create();
+
   const maxFixedUpdatesPerFrame = 10;
   let simulationBehind = false;
 
@@ -392,10 +394,17 @@ async function main() {
     });
     device.queue.writeBuffer(timeBuffer, 0, timeData.arrayBuffer);
 
+    mat4.rotateY(
+      objectModelTmp,
+      objectModelTmp,
+      (Math.PI / 180) * deltaTime * 10
+    );
+
     cameraData.set({
       view,
       projection,
       position: cameraWorldPosition,
+      objectModelTmp,
     });
     device.queue.writeBuffer(cameraDataBuffer, 0, cameraData.arrayBuffer);
 

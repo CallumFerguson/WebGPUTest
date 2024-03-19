@@ -1,7 +1,12 @@
 import cubeMapShaderString from "../shaders/cubeMap.wgsl?raw";
-import { createTextureFromImages } from "webgpu-utils";
+import {
+  createTextureFromImages,
+  makeShaderDataDefinitions,
+  makeStructuredView,
+} from "webgpu-utils";
 import { createBuffer, cubeIndices, cubeVertexData } from "./utility";
 import { multisampleCount } from "./constants";
+import { mat4 } from "gl-matrix";
 
 export class CubeMapRenderer {
   render: ((renderPassEncoder: GPURenderPassEncoder) => void) | undefined =
@@ -26,6 +31,17 @@ export class CubeMapRenderer {
         mips: true,
       }
     );
+
+    const defs = makeShaderDataDefinitions(cubeMapShaderString);
+    const objectData = makeStructuredView(defs.uniforms.objectData);
+    const objectDataBuffer = device.createBuffer({
+      size: objectData.arrayBuffer.byteLength,
+      usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
+    });
+    objectData.set({
+      model: mat4.create(),
+    });
+    device.queue.writeBuffer(objectDataBuffer, 0, objectData.arrayBuffer);
 
     const vertexBuffer = createBuffer(
       device,
@@ -58,8 +74,18 @@ export class CubeMapRenderer {
       ],
     });
 
+    const bindGroupLayoutGroup1 = device.createBindGroupLayout({
+      entries: [
+        {
+          binding: 0,
+          visibility: GPUShaderStage.VERTEX,
+          buffer: {},
+        },
+      ],
+    });
+
     const pipelineLayout = device.createPipelineLayout({
-      bindGroupLayouts: [bindGroupLayoutGroup0],
+      bindGroupLayouts: [bindGroupLayoutGroup0, bindGroupLayoutGroup1],
     });
 
     const pipelineDescriptor: GPURenderPipelineDescriptor = {
@@ -115,9 +141,15 @@ export class CubeMapRenderer {
       ],
     });
 
+    let bindGroup1 = device.createBindGroup({
+      layout: bindGroupLayoutGroup1,
+      entries: [{ binding: 0, resource: { buffer: objectDataBuffer } }],
+    });
+
     this.render = (renderPassEncoder: GPURenderPassEncoder) => {
       renderPassEncoder.setPipeline(pipeline);
       renderPassEncoder.setBindGroup(0, bindGroup0);
+      renderPassEncoder.setBindGroup(1, bindGroup1);
       renderPassEncoder.setVertexBuffer(0, vertexBuffer);
       renderPassEncoder.setIndexBuffer(indexBuffer, "uint16");
       renderPassEncoder.drawIndexed(cubeIndices.length);
