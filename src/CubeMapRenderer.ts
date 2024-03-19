@@ -52,7 +52,7 @@ export class CubeMapRenderer {
         },
         {
           binding: 2,
-          visibility: GPUShaderStage.VERTEX,
+          visibility: GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT,
           buffer: {},
         },
       ],

@@ -1,6 +1,6 @@
 import pointParticleShaderString from "../shaders/pointParticle.wgsl?raw";
 import computeParticleShaderString from "../shaders/computeParticle.wgsl?raw";
-import { mat4, vec3, quat } from "gl-matrix";
+import { mat4, vec3, vec4, quat } from "gl-matrix";
 import { Bounds, clamp, getDevice } from "./utility";
 import { makeShaderDataDefinitions, makeStructuredView } from "webgpu-utils";
 import { BallRenderer } from "./BallRenderer";
@@ -56,6 +56,8 @@ async function main() {
   let cameraPosition = vec3.fromValues(0, 0, 75);
 
   let view = mat4.create();
+  let cameraWorldPositionVec4 = vec4.create();
+  let cameraWorldPosition = vec3.create();
   calculateView();
 
   function calculateView() {
@@ -75,6 +77,19 @@ async function main() {
 
     mat4.mul(cameraModel, cameraParentYModel, cameraModel);
     mat4.mul(cameraModel, cameraParentXModel, cameraModel);
+
+    cameraWorldPositionVec4[0] = 0;
+    cameraWorldPositionVec4[0] = 0;
+    cameraWorldPositionVec4[0] = 0;
+    cameraWorldPositionVec4[0] = 1;
+    vec4.transformMat4(
+      cameraWorldPositionVec4,
+      cameraWorldPositionVec4,
+      cameraModel
+    );
+    cameraWorldPosition[0] = cameraWorldPositionVec4[0];
+    cameraWorldPosition[1] = cameraWorldPositionVec4[1];
+    cameraWorldPosition[2] = cameraWorldPositionVec4[2];
 
     mat4.invert(view, cameraModel);
   }
@@ -378,8 +393,9 @@ async function main() {
     device.queue.writeBuffer(timeBuffer, 0, timeData.arrayBuffer);
 
     cameraData.set({
-      view: view,
-      projection: projection,
+      view,
+      projection,
+      position: cameraWorldPosition,
     });
     device.queue.writeBuffer(cameraDataBuffer, 0, cameraData.arrayBuffer);
 
