@@ -1,4 +1,5 @@
 import fullscreenTextureShaderString from "../shaders/fullscreenTexture.wgsl?raw";
+import { multisampleCount } from "./constants";
 
 export class FullscreenTextureRenderer {
   render: (renderPassEncoder: GPURenderPassEncoder) => void;
@@ -52,7 +53,7 @@ export class FullscreenTextureRenderer {
         cullMode: "none",
       },
       multisample: {
-        count: 1,
+        count: multisampleCount,
       },
     };
     const pipeline = device.createRenderPipeline(pipelineDescriptor);

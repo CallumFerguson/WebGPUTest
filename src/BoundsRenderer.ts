@@ -1,5 +1,6 @@
 import boundsShaderString from "../shaders/bounds.wgsl?raw";
 import { createBuffer } from "./utility";
+import { multisampleCount } from "./constants";
 
 export class BoundsRenderer {
   render: (renderPassEncoder: GPURenderPassEncoder) => void;
@@ -70,7 +71,7 @@ export class BoundsRenderer {
         cullMode: "none",
       },
       multisample: {
-        count: 1,
+        count: multisampleCount,
       },
       depthStencil: {
         depthWriteEnabled: true,

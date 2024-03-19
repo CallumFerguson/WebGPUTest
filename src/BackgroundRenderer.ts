@@ -1,4 +1,5 @@
 import fullscreenColorShaderString from "../shaders/fullscreenColor.wgsl?raw";
+import { multisampleCount } from "./constants";
 
 export class BackgroundRenderer {
   render: (renderPassEncoder: GPURenderPassEncoder) => void;
@@ -32,7 +33,7 @@ export class BackgroundRenderer {
         cullMode: "none",
       },
       multisample: {
-        count: 1,
+        count: multisampleCount,
       },
     };
     const pipeline = device.createRenderPipeline(pipelineDescriptor);

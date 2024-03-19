@@ -1,5 +1,6 @@
 import ballShaderString from "../shaders/ball.wgsl?raw";
 import { BufferBundle, createBuffer, loadModel, shuffleArray } from "./utility";
+import { multisampleCount } from "./constants";
 
 // const ballRadius = 0.12;
 
@@ -162,7 +163,7 @@ export class BallRenderer {
         cullMode: "back",
       },
       multisample: {
-        count: 1,
+        count: multisampleCount,
       },
       depthStencil: {
         depthWriteEnabled: true,

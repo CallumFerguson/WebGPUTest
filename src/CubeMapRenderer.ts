@@ -1,6 +1,7 @@
 import cubeMapShaderString from "../shaders/cubeMap.wgsl?raw";
 import { createTextureFromImages } from "webgpu-utils";
 import { createBuffer, cubeMapIndices, cubeMapVertices } from "./utility";
+import { multisampleCount } from "./constants";
 
 export class CubeMapRenderer {
   render: ((renderPassEncoder: GPURenderPassEncoder) => void) | undefined =
@@ -91,7 +92,7 @@ export class CubeMapRenderer {
         cullMode: "back",
       },
       multisample: {
-        count: 1,
+        count: multisampleCount,
       },
       depthStencil: {
         depthWriteEnabled: true,

@@ -5,7 +5,7 @@ import { Bounds, clamp, getDevice } from "./utility";
 import { makeShaderDataDefinitions, makeStructuredView } from "webgpu-utils";
 import { BallRenderer } from "./BallRenderer";
 import { BallComputer } from "./BallComputer";
-import { fixedDeltaTime } from "./constants";
+import { fixedDeltaTime, multisampleCount } from "./constants";
 import { BoundsRenderer } from "./BoundsRenderer";
 import { CubeMapRenderer } from "./CubeMapRenderer";
 
@@ -192,7 +192,8 @@ async function main() {
       return;
     }
 
-    createDepthTexture();
+    createNewDepthTexture();
+    createNewMultisampleTexture();
     calculateProjection();
   }
 
@@ -212,21 +213,40 @@ async function main() {
   };
 
   let depthTexture: GPUTexture;
-  function createDepthTexture() {
+  function createNewDepthTexture() {
     if (depthTexture) {
       depthTexture.destroy();
     }
     depthTexture = device.createTexture({
       size: [canvas.width, canvas.height],
       format: "depth24plus",
-      sampleCount: 1,
+      sampleCount: multisampleCount,
       usage: GPUTextureUsage.RENDER_ATTACHMENT,
     });
     // @ts-ignore
     renderPassDescriptor.depthStencilAttachment.view =
       depthTexture.createView();
   }
-  createDepthTexture();
+  createNewDepthTexture();
+
+  let multisampleTexture: GPUTexture | undefined = undefined;
+  function createNewMultisampleTexture() {
+    if (multisampleTexture) {
+      multisampleTexture.destroy();
+    }
+    if (multisampleCount !== 1) {
+      multisampleTexture = device.createTexture({
+        format: presentationFormat,
+        usage: GPUTextureUsage.RENDER_ATTACHMENT,
+        size: [canvas.width, canvas.height],
+        sampleCount: multisampleCount,
+      });
+      // @ts-ignore
+      renderPassDescriptor.colorAttachments[0].view =
+        multisampleTexture.createView();
+    }
+  }
+  createNewMultisampleTexture();
 
   let mouseX = 0;
   let mouseY = 0;
@@ -365,10 +385,17 @@ async function main() {
 
     const commandEncoder = device.createCommandEncoder();
 
-    // @ts-ignore
-    renderPassDescriptor.colorAttachments[0].view = context
-      .getCurrentTexture()
-      .createView();
+    if (multisampleCount !== 1) {
+      // @ts-ignore
+      renderPassDescriptor.colorAttachments[0].resolveTarget = context
+        .getCurrentTexture()
+        .createView();
+    } else {
+      // @ts-ignore
+      renderPassDescriptor.colorAttachments[0].view = context
+        .getCurrentTexture()
+        .createView();
+    }
 
     renderPassFunctions.forEach((renderPassFunction) => {
       renderPassFunction(commandEncoder);
