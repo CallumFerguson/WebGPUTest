@@ -9,6 +9,7 @@ struct CameraData {
 
 struct VertexInput {
     @location(0) position: vec4f,
+    @location(1) normal: vec3f,
 }
 
 struct VertexOutput {
@@ -22,6 +23,7 @@ fn vert(i: VertexInput) -> VertexOutput {
 
     o.position = cameraData.projection * cameraData.view * i.position;
     o.normal = normalize(i.position.xyz);
+//    o.normal = (cameraData.view * vec4(0, 0, -1, 0)).xyz;
 
     return o;
 }

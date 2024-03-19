@@ -161,22 +161,28 @@ export function shuffleArray<T>(array: T[]): T[] {
   return array;
 }
 
-// from: https://webgpufundamentals.org/webgpu/lessons/webgpu-cube-maps.html
-export const cubeMapVertices = new Float32Array([
-  // front face
-  -1, 1, 1, -1, -1, 1, 1, 1, 1, 1, -1, 1,
-  // right face
-  1, 1, -1, 1, 1, 1, 1, -1, -1, 1, -1, 1,
-  // back face
-  1, 1, -1, 1, -1, -1, -1, 1, -1, -1, -1, -1,
-  // left face
-  -1, 1, 1, -1, 1, -1, -1, -1, 1, -1, -1, -1,
-  // bottom face
-  1, -1, 1, -1, -1, 1, 1, -1, -1, -1, -1, -1,
-  // top face
-  -1, 1, 1, 1, 1, 1, -1, 1, -1, 1, 1, -1,
+// from: https://webgpufundamentals.org/webgpu/lessons/webgpu-environment-maps.html
+export const cubeVertexData = new Float32Array([
+  //  position   |  normals
+  //-------------+----------------------
+  // front face      positive z
+  -1, 1, 1, 0, 0, 1, -1, -1, 1, 0, 0, 1, 1, 1, 1, 0, 0, 1, 1, -1, 1, 0, 0, 1,
+  // right face      positive x
+  1, 1, -1, 1, 0, 0, 1, 1, 1, 1, 0, 0, 1, -1, -1, 1, 0, 0, 1, -1, 1, 1, 0, 0,
+  // back face       negative z
+  1, 1, -1, 0, 0, -1, 1, -1, -1, 0, 0, -1, -1, 1, -1, 0, 0, -1, -1, -1, -1, 0,
+  0, -1,
+  // left face        negative x
+  -1, 1, 1, -1, 0, 0, -1, 1, -1, -1, 0, 0, -1, -1, 1, -1, 0, 0, -1, -1, -1, -1,
+  0, 0,
+  // bottom face      negative y
+  1, -1, 1, 0, -1, 0, -1, -1, 1, 0, -1, 0, 1, -1, -1, 0, -1, 0, -1, -1, -1, 0,
+  -1, 0,
+  // top face         positive y
+  -1, 1, 1, 0, 1, 0, 1, 1, 1, 0, 1, 0, -1, 1, -1, 0, 1, 0, 1, 1, -1, 0, 1, 0,
 ]);
-export const cubeMapIndices = new Uint16Array([
+
+export const cubeIndices = new Uint16Array([
   0,
   1,
   2,
