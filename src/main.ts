@@ -7,7 +7,8 @@ import { BallRenderer } from "./BallRenderer";
 import { BallComputer } from "./BallComputer";
 import { fixedDeltaTime, multisampleCount } from "./constants";
 import { BoundsRenderer } from "./BoundsRenderer";
-import { CubeMapRenderer } from "./CubeMapRenderer";
+import { CubeMapReflectionRenderer } from "./CubeMapReflectionRenderer";
+import { SkyboxRenderer } from "./SkyboxRenderer";
 
 async function main() {
   const { gpu, device } = await getDevice();
@@ -42,6 +43,8 @@ async function main() {
     [];
   const fixedUpdateFunctions: ((fixedDeltaTime: number) => void)[] = [];
 
+  let projection = mat4.create();
+
   let cameraParentXModel = mat4.create();
   let cameraParentXRotation = quat.create();
   let cameraParentXPosition = vec3.fromValues(0, 0, 0);
@@ -53,14 +56,22 @@ async function main() {
 
   let cameraModel = mat4.create();
   let cameraRotation = quat.create();
-  let cameraPosition = vec3.fromValues(0, 0, 75);
+  let cameraPosition = vec3.fromValues(0, 0, 5);
 
   let view = mat4.create();
+  let viewDirectionProjectionInverse = mat4.create();
   let cameraWorldPositionVec4 = vec4.create();
   let cameraWorldPosition = vec3.create();
-  calculateView();
 
-  function calculateView() {
+  function calculateViewProjection() {
+    mat4.perspectiveZO(
+      projection,
+      90,
+      canvas.width / canvas.height,
+      0.01,
+      1000
+    );
+
     mat4.fromRotationTranslation(
       cameraParentXModel,
       cameraParentXRotation,
@@ -92,19 +103,20 @@ async function main() {
     cameraWorldPosition[2] = cameraWorldPositionVec4[2];
 
     mat4.invert(view, cameraModel);
-  }
 
-  let projection = mat4.create();
-  function calculateProjection() {
-    mat4.perspectiveZO(
+    mat4.copy(viewDirectionProjectionInverse, view);
+    // remove the translation
+    viewDirectionProjectionInverse[12] = 0;
+    viewDirectionProjectionInverse[13] = 0;
+    viewDirectionProjectionInverse[14] = 0;
+    mat4.mul(
+      viewDirectionProjectionInverse,
       projection,
-      90,
-      canvas.width / canvas.height,
-      0.01,
-      1000
+      viewDirectionProjectionInverse
     );
+    mat4.invert(viewDirectionProjectionInverse, viewDirectionProjectionInverse);
   }
-  calculateProjection();
+  calculateViewProjection();
 
   const defs = makeShaderDataDefinitions(pointParticleShaderString);
   const cameraData = makeStructuredView(defs.uniforms.cameraData);
@@ -179,9 +191,17 @@ async function main() {
   // );
   // renderFunctions.push(boundsRenderer.render);
 
-  const cubeMapRenderer = new CubeMapRenderer();
-  await cubeMapRenderer.init(device, presentationFormat, cameraDataBuffer);
-  renderFunctions.push(cubeMapRenderer.render!);
+  const cubeMapReflectionRenderer = new CubeMapReflectionRenderer();
+  await cubeMapReflectionRenderer.init(
+    device,
+    presentationFormat,
+    cameraDataBuffer
+  );
+  renderFunctions.push(cubeMapReflectionRenderer.render!);
+
+  const skyboxRenderer = new SkyboxRenderer();
+  await skyboxRenderer.init(device, presentationFormat, cameraDataBuffer);
+  renderFunctions.push(skyboxRenderer.render!);
 
   function resizeCanvasIfNeeded(): boolean {
     const width = Math.max(
@@ -209,7 +229,7 @@ async function main() {
 
     createNewDepthTexture();
     createNewMultisampleTexture();
-    calculateProjection();
+    calculateViewProjection();
   }
 
   const renderPassDescriptor: unknown = {
@@ -299,7 +319,7 @@ async function main() {
       minDist,
       maxDist
     );
-    calculateView();
+    calculateViewProjection();
   });
 
   const objectModelTmp = mat4.create();
@@ -336,7 +356,7 @@ async function main() {
         );
         quat.fromEuler(cameraParentYRotation, cameraParentYEuler, 0, 0);
 
-        calculateView();
+        calculateViewProjection();
       } else if (rightMouseDown) {
         // const sensitivity = 0.5;
         // // mat4.rotateY(
@@ -405,6 +425,7 @@ async function main() {
       projection,
       position: cameraWorldPosition,
       objectModelTmp,
+      viewDirectionProjectionInverse,
     });
     device.queue.writeBuffer(cameraDataBuffer, 0, cameraData.arrayBuffer);
 

@@ -2,6 +2,7 @@ struct CameraData {
     view: mat4x4f,
     projection: mat4x4f,
     position: vec3f,
+    viewDirectionProjectionInverse: mat4x4f,
 }
 
 @group(0) @binding(0) var<uniform> cameraData: CameraData;

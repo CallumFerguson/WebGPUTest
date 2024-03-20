@@ -1,4 +1,4 @@
-import cubeMapShaderString from "../shaders/cubeMap.wgsl?raw";
+import cubeMapReflectionShaderString from "../shaders/cubeMapReflection.wgsl?raw";
 import {
   createTextureFromImages,
   makeShaderDataDefinitions,
@@ -8,7 +8,7 @@ import { createBuffer, cubeIndices, cubeVertexData } from "./utility";
 import { multisampleCount } from "./constants";
 import { mat4 } from "gl-matrix";
 
-export class CubeMapRenderer {
+export class CubeMapReflectionRenderer {
   render: ((renderPassEncoder: GPURenderPassEncoder) => void) | undefined =
     undefined;
 
@@ -32,7 +32,7 @@ export class CubeMapRenderer {
       }
     );
 
-    const defs = makeShaderDataDefinitions(cubeMapShaderString);
+    const defs = makeShaderDataDefinitions(cubeMapReflectionShaderString);
     const objectData = makeStructuredView(defs.uniforms.objectData);
     const objectDataBuffer = device.createBuffer({
       size: objectData.arrayBuffer.byteLength,
@@ -51,7 +51,7 @@ export class CubeMapRenderer {
     const indexBuffer = createBuffer(device, cubeIndices, GPUBufferUsage.INDEX);
 
     const shaderModule = device.createShaderModule({
-      code: cubeMapShaderString,
+      code: cubeMapReflectionShaderString,
     });
 
     const bindGroupLayoutGroup0 = device.createBindGroupLayout({
