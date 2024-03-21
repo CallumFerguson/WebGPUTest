@@ -1,10 +1,16 @@
 import cubeMapReflectionShaderString from "../shaders/cubeMapReflection.wgsl?raw";
 import {
+  createTextureFromImage,
   createTextureFromImages,
   makeShaderDataDefinitions,
   makeStructuredView,
 } from "webgpu-utils";
-import { createBuffer, cubeIndices, cubeVertexData } from "./utility";
+import {
+  createBuffer,
+  cubeIndices,
+  cubeVertexData,
+  loadModel,
+} from "./utility";
 import { multisampleCount } from "./constants";
 import { mat4 } from "gl-matrix";
 
@@ -32,6 +38,10 @@ export class CubeMapReflectionRenderer {
       }
     );
 
+    const normalTexture = await createTextureFromImage(device, "normal.png", {
+      mips: true,
+    });
+
     const defs = makeShaderDataDefinitions(cubeMapReflectionShaderString);
     const objectData = makeStructuredView(defs.uniforms.objectData);
     const objectDataBuffer = device.createBuffer({
@@ -43,12 +53,12 @@ export class CubeMapReflectionRenderer {
     });
     device.queue.writeBuffer(objectDataBuffer, 0, objectData.arrayBuffer);
 
-    const vertexBuffer = createBuffer(
-      device,
-      cubeVertexData,
-      GPUBufferUsage.VERTEX
-    );
-    const indexBuffer = createBuffer(device, cubeIndices, GPUBufferUsage.INDEX);
+    const { vertices, indices, uvs, normals } = await loadModel("cube.obj");
+
+    const vertexBuffer = createBuffer(device, vertices, GPUBufferUsage.VERTEX);
+    const uvBuffer = createBuffer(device, uvs, GPUBufferUsage.VERTEX);
+    const normalBuffer = createBuffer(device, normals, GPUBufferUsage.VERTEX);
+    const indexBuffer = createBuffer(device, indices, GPUBufferUsage.INDEX);
 
     const shaderModule = device.createShaderModule({
       code: cubeMapReflectionShaderString,
@@ -70,6 +80,11 @@ export class CubeMapReflectionRenderer {
           binding: 2,
           visibility: GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT,
           buffer: {},
+        },
+        {
+          binding: 3,
+          visibility: GPUShaderStage.FRAGMENT,
+          texture: {},
         },
       ],
     });
@@ -95,11 +110,16 @@ export class CubeMapReflectionRenderer {
         entryPoint: "vert",
         buffers: [
           {
-            arrayStride: 6 * 4,
-            attributes: [
-              { shaderLocation: 0, offset: 0, format: "float32x3" },
-              { shaderLocation: 1, offset: 12, format: "float32x3" },
-            ],
+            arrayStride: 3 * 4,
+            attributes: [{ shaderLocation: 0, offset: 0, format: "float32x3" }],
+          },
+          {
+            arrayStride: 3 * 4,
+            attributes: [{ shaderLocation: 1, offset: 0, format: "float32x3" }],
+          },
+          {
+            arrayStride: 2 * 4,
+            attributes: [{ shaderLocation: 2, offset: 0, format: "float32x2" }],
           },
         ],
       },
@@ -138,6 +158,7 @@ export class CubeMapReflectionRenderer {
         { binding: 0, resource: texture.createView({ dimension: "cube" }) },
         { binding: 1, resource: sampler },
         { binding: 2, resource: { buffer: cameraDataBuffer } },
+        { binding: 3, resource: normalTexture.createView() },
       ],
     });
 
@@ -151,8 +172,10 @@ export class CubeMapReflectionRenderer {
       renderPassEncoder.setBindGroup(0, bindGroup0);
       renderPassEncoder.setBindGroup(1, bindGroup1);
       renderPassEncoder.setVertexBuffer(0, vertexBuffer);
-      renderPassEncoder.setIndexBuffer(indexBuffer, "uint16");
-      renderPassEncoder.drawIndexed(cubeIndices.length);
+      renderPassEncoder.setVertexBuffer(1, normalBuffer);
+      renderPassEncoder.setVertexBuffer(2, uvBuffer);
+      renderPassEncoder.setIndexBuffer(indexBuffer, "uint32");
+      renderPassEncoder.drawIndexed(indices.length);
     };
   }
 }
