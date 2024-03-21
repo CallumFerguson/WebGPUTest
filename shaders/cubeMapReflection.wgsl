@@ -55,12 +55,14 @@ fn frag(i: VertexOutput) -> @location(0) vec4f {
 //    direction.y += rand(direction.yz) * randomMagnitude - halfRandomMagnitude;
 //    direction.z += rand(direction.zx) * randomMagnitude - halfRandomMagnitude;
 
+//    direction += textureNormal;
 
-    direction += textureNormal;
+//    let reflectionColor = textureSample(texture, textureSampler, direction * vec3(-1, 1, 1)).rgb;
+//
+//    return vec4(reflectionColor * vec3(0.7, 0.7, 0.65), 1);
 
-    let reflectionColor = textureSample(texture, textureSampler, direction * vec3(-1, 1, 1)).rgb;
-
-    return vec4(reflectionColor * vec3(0.7, 0.7, 0.65), 1);
+    var light = dot(worldNormal, normalize(vec3(1, 1, 0)));
+    return vec4(light, light, light, 1);
 }
 
 fn rand(co: vec2f) -> f32 {

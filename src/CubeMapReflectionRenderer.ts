@@ -5,12 +5,7 @@ import {
   makeShaderDataDefinitions,
   makeStructuredView,
 } from "webgpu-utils";
-import {
-  createBuffer,
-  cubeIndices,
-  cubeVertexData,
-  loadModel,
-} from "./utility";
+import { calculateNormals, createBuffer, loadModel } from "./utility";
 import { multisampleCount } from "./constants";
 import { mat4 } from "gl-matrix";
 
@@ -53,7 +48,11 @@ export class CubeMapReflectionRenderer {
     });
     device.queue.writeBuffer(objectDataBuffer, 0, objectData.arrayBuffer);
 
-    const { vertices, indices, uvs, normals } = await loadModel("cube.obj");
+    let { vertices, indices, uvs, normals } = await loadModel(
+      "smoothSphere.glb"
+    );
+
+    normals = calculateNormals(vertices, indices);
 
     const vertexBuffer = createBuffer(device, vertices, GPUBufferUsage.VERTEX);
     const uvBuffer = createBuffer(device, uvs, GPUBufferUsage.VERTEX);

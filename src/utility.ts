@@ -161,62 +161,67 @@ export function shuffleArray<T>(array: T[]): T[] {
   return array;
 }
 
-// from: https://webgpufundamentals.org/webgpu/lessons/webgpu-environment-maps.html
-export const cubeVertexData = new Float32Array([
-  //  position   |  normals
-  //-------------+----------------------
-  // front face      positive z
-  -1, 1, 1, 0, 0, 1, -1, -1, 1, 0, 0, 1, 1, 1, 1, 0, 0, 1, 1, -1, 1, 0, 0, 1,
-  // right face      positive x
-  1, 1, -1, 1, 0, 0, 1, 1, 1, 1, 0, 0, 1, -1, -1, 1, 0, 0, 1, -1, 1, 1, 0, 0,
-  // back face       negative z
-  1, 1, -1, 0, 0, -1, 1, -1, -1, 0, 0, -1, -1, 1, -1, 0, 0, -1, -1, -1, -1, 0,
-  0, -1,
-  // left face        negative x
-  -1, 1, 1, -1, 0, 0, -1, 1, -1, -1, 0, 0, -1, -1, 1, -1, 0, 0, -1, -1, -1, -1,
-  0, 0,
-  // bottom face      negative y
-  1, -1, 1, 0, -1, 0, -1, -1, 1, 0, -1, 0, 1, -1, -1, 0, -1, 0, -1, -1, -1, 0,
-  -1, 0,
-  // top face         positive y
-  -1, 1, 1, 0, 1, 0, 1, 1, 1, 0, 1, 0, -1, 1, -1, 0, 1, 0, 1, 1, -1, 0, 1, 0,
-]);
+export function calculateNormals(
+  vertices: Float32Array,
+  indices: Uint32Array
+): Float32Array {
+  if (indices.length % 3 !== 0) {
+    throw new Error(
+      `calculateNormals indices length ${indices.length} should be a multiple of 3`
+    );
+  }
 
-export const cubeIndices = new Uint16Array([
-  0,
-  1,
-  2,
-  2,
-  1,
-  3, // front
-  4,
-  5,
-  6,
-  6,
-  5,
-  7, // right
-  8,
-  9,
-  10,
-  10,
-  9,
-  11, // back
-  12,
-  13,
-  14,
-  14,
-  13,
-  15, // left
-  16,
-  17,
-  18,
-  18,
-  17,
-  19, // bottom
-  20,
-  21,
-  22,
-  22,
-  21,
-  23, // top
-]);
+  const a = vec3.create();
+  const b = vec3.create();
+
+  const v1 = vec3.create();
+  const v2 = vec3.create();
+  const v3 = vec3.create();
+
+  const normal = vec3.create();
+
+  const normals = new Float32Array(vertices.length);
+
+  for (let i = 0; i < indices.length / 3; i++) {
+    const v1i = indices[i * 3];
+    vec3.set(
+      v1,
+      vertices[v1i * 3],
+      vertices[v1i * 3 + 1],
+      vertices[v1i * 3 + 2]
+    );
+    const v2i = indices[i * 3 + 1];
+    vec3.set(
+      v2,
+      vertices[v2i * 3],
+      vertices[v2i * 3 + 1],
+      vertices[v2i * 3 + 2]
+    );
+    const v3i = indices[i * 3 + 2];
+    vec3.set(
+      v3,
+      vertices[v3i * 3],
+      vertices[v3i * 3 + 1],
+      vertices[v3i * 3 + 2]
+    );
+
+    vec3.sub(a, v2, v1);
+    vec3.sub(b, v3, v1);
+    vec3.cross(normal, a, b);
+    vec3.normalize(normal, normal);
+
+    normals[v1i * 3] = normal[0];
+    normals[v1i * 3 + 1] = normal[1];
+    normals[v1i * 3 + 2] = normal[2];
+
+    normals[v2i * 3] = normal[0];
+    normals[v2i * 3 + 1] = normal[1];
+    normals[v2i * 3 + 2] = normal[2];
+
+    normals[v3i * 3] = normal[0];
+    normals[v3i * 3 + 1] = normal[1];
+    normals[v3i * 3 + 2] = normal[2];
+  }
+
+  return normals;
+}
