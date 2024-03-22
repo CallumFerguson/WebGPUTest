@@ -27,29 +27,42 @@ struct VertexInput {
 struct VertexOutput {
     @builtin(position) position: vec4f,
     @location(0) worldPosition: vec3f,
-    @location(1) worldNormal: vec3f,
-    @location(2) uv: vec2f,
+    @location(1) uv: vec2f,
+    @location(2) T: vec3f,
+    @location(3) B: vec3f,
+    @location(4) N: vec3f,
 }
 
 @vertex
 fn vert(i: VertexInput) -> VertexOutput {
+    let T = normalize((objectData.model * vec4(i.tangent, 0)).xyz);
+    let B = normalize((objectData.model * vec4(i.bitangent, 0)).xyz);
+    let N = normalize((objectData.model * vec4(i.normal, 0)).xyz);
+//    let TBN = mat3x3(T, B, N);
+
     var o: VertexOutput;
 
     o.position = cameraData.projection * cameraData.view * objectData.model * i.position;
     o.worldPosition = (objectData.model * i.position).xyz;
-    o.worldNormal = (objectData.model * vec4(i.normal, 0)).xyz;
+//    o.worldNormal = (objectData.model * vec4(i.normal, 0)).xyz;
     o.uv = i.uv;
+
+    o.T = T;
+    o.B = B;
+    o.N = N;
 
     return o;
 }
 
 @fragment
 fn frag(i: VertexOutput) -> @location(0) vec4f {
-//    let textureNormal = normalize(textureSample(normalTexture, textureSampler, i.uv).xyz * 2 - 1);
+    let TBN = mat3x3(i.T, i.B, i.N);
 
-//    let worldNormal = normalize(i.worldNormal);
-//    let eyeToSurfaceDir = normalize(i.worldPosition - cameraData.position);
-//    var direction = reflect(eyeToSurfaceDir, worldNormal);
+    var worldNormal = textureSample(normalTexture, textureSampler, i.uv).xyz * 2 - 1;
+    worldNormal = normalize(TBN * worldNormal);
+
+    let eyeToSurfaceDir = normalize(i.worldPosition - cameraData.position);
+    var direction = reflect(eyeToSurfaceDir, worldNormal);
 
 //    const randomMagnitude = 0.025;
 //    const halfRandomMagnitude = randomMagnitude / 2;
@@ -57,15 +70,9 @@ fn frag(i: VertexOutput) -> @location(0) vec4f {
 //    direction.y += rand(direction.yz) * randomMagnitude - halfRandomMagnitude;
 //    direction.z += rand(direction.zx) * randomMagnitude - halfRandomMagnitude;
 
-//    direction += textureNormal;
+    let reflectionColor = textureSample(texture, textureSampler, direction * vec3(-1, 1, 1)).rgb;
 
-//    let reflectionColor = textureSample(texture, textureSampler, direction * vec3(-1, 1, 1)).rgb;
-//
-//    return vec4(reflectionColor * vec3(0.7, 0.7, 0.65), 1);
-
-//    var light = dot(worldNormal, normalize(-vec3(-1, -1, 0)));
-//    return vec4(light, light, light, 1);
-    return vec4(i.worldNormal + 1 * 0.5, 1);
+    return vec4(reflectionColor * vec3(0.7, 0.7, 0.65), 1);
 }
 
 fn rand(co: vec2f) -> f32 {
