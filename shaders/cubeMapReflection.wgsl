@@ -35,21 +35,14 @@ struct VertexOutput {
 
 @vertex
 fn vert(i: VertexInput) -> VertexOutput {
-    let T = normalize((objectData.model * vec4(i.tangent, 0)).xyz);
-    let B = normalize((objectData.model * vec4(i.bitangent, 0)).xyz);
-    let N = normalize((objectData.model * vec4(i.normal, 0)).xyz);
-//    let TBN = mat3x3(T, B, N);
-
     var o: VertexOutput;
 
     o.position = cameraData.projection * cameraData.view * objectData.model * i.position;
     o.worldPosition = (objectData.model * i.position).xyz;
-//    o.worldNormal = (objectData.model * vec4(i.normal, 0)).xyz;
     o.uv = i.uv;
-
-    o.T = T;
-    o.B = B;
-    o.N = N;
+    o.T = normalize((objectData.model * vec4(i.tangent, 0)).xyz);
+    o.B = normalize((objectData.model * vec4(i.bitangent, 0)).xyz);
+    o.N = normalize((objectData.model * vec4(i.normal, 0)).xyz);
 
     return o;
 }
@@ -57,9 +50,8 @@ fn vert(i: VertexInput) -> VertexOutput {
 @fragment
 fn frag(i: VertexOutput) -> @location(0) vec4f {
     let TBN = mat3x3(i.T, i.B, i.N);
-
-    var worldNormal = textureSample(normalTexture, textureSampler, i.uv).xyz * 2 - 1;
-    worldNormal = normalize(TBN * worldNormal);
+    let textureNormal = textureSample(normalTexture, textureSampler, i.uv).xyz * 2 - 1;
+    let worldNormal = normalize(TBN * textureNormal);
 
     let eyeToSurfaceDir = normalize(i.worldPosition - cameraData.position);
     var direction = reflect(eyeToSurfaceDir, worldNormal);
