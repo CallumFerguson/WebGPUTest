@@ -127,7 +127,7 @@ export class BallRenderer {
       bindGroupLayouts: [bindGroupLayoutGroup0, bindGroupLayoutGroup1],
     });
 
-    const { vertices, indices, normals } = await loadModel("sphere.glb");
+    const { vertices, indices, normals } = await loadModel("tangents.glb");
 
     const vertexBuffer = createBuffer(device, vertices, GPUBufferUsage.VERTEX);
     const normalBuffer = createBuffer(device, normals, GPUBufferUsage.VERTEX);

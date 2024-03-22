@@ -166,7 +166,7 @@ async function main() {
   //   center: [0, 0, 0],
   //   rotation,
   // };
-
+  //
   // const numObjects = 64 * 5; // 50
   // const ballRenderer = new BallRenderer();
   // await ballRenderer.init(

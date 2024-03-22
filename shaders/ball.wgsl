@@ -47,6 +47,6 @@ fn vert(i: VertexInput) -> VertexOutput {
 fn frag(i: VertexOutput) -> @location(0) vec4f {
     var normal = normalize(i.normal);
     var light = dot(normal, normalize(vec3(-1, 1, 1)));
-    light = clamp(light, 0.1, 1);
+    light = clamp(light, 0.5, 1);
     return vec4(i.color * light, 1);
 }
