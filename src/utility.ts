@@ -63,10 +63,12 @@ export function createBuffer(
 
 export async function loadModel(fileName: string): Promise<{
   vertices: Float32Array;
-  normals: Float32Array;
-  uvs: Float32Array;
-  textureURI: string;
   indices: Uint32Array;
+  normals: Float32Array | undefined;
+  uvs: Float32Array | undefined;
+  textureURI: string | undefined;
+  tangents: Float32Array | undefined;
+  bitangents: Float32Array | undefined;
 }> {
   // @ts-ignore
   const ajs: any = await assimpjs();
@@ -102,6 +104,7 @@ export async function loadModel(fileName: string): Promise<{
 
         // parse the result json
         let resultJson = JSON.parse(jsonContent);
+        // console.log(resultJson);
         resolve(resultJson);
       });
   });
@@ -110,14 +113,15 @@ export async function loadModel(fileName: string): Promise<{
 
   const vertices = Float32Array.from(mesh.vertices);
   const normals = Float32Array.from(mesh.normals);
-  if (mesh.texturecoords.length < 1) {
-    console.log("texture missing texurecoords");
-  }
+
+  let uvs = undefined;
   if (mesh.texturecoords.length > 1) {
-    console.log("texture has multiple sets of texturecoords");
+    console.log("mesh has multiple sets of texturecoords");
     console.log(mesh.texturecoords);
   }
-  const uvs = Float32Array.from(mesh.texturecoords[0]);
+  if (mesh.texturecoords.length > 0) {
+    uvs = Float32Array.from(mesh.texturecoords[0]);
+  }
   const indices = Uint32Array.from(mesh.faces.flat());
 
   let textureURI;
@@ -128,7 +132,25 @@ export async function loadModel(fileName: string): Promise<{
     textureURI = "";
   }
 
-  return { vertices, normals, uvs, textureURI, indices };
+  let tangents = undefined;
+  if (mesh.tangents) {
+    tangents = mesh.tangents;
+  }
+
+  let bitangents = undefined;
+  if (mesh.bitangents) {
+    bitangents = mesh.bitangents;
+  }
+
+  return {
+    vertices,
+    indices,
+    normals,
+    uvs,
+    textureURI,
+    tangents,
+    bitangents,
+  };
 }
 
 export function randomDirection(randomVec3: vec3, magnitude: number = 1): vec3 {
@@ -210,18 +232,40 @@ export function calculateNormals(
     vec3.cross(normal, a, b);
     vec3.normalize(normal, normal);
 
-    normals[v1i * 3] = normal[0];
-    normals[v1i * 3 + 1] = normal[1];
-    normals[v1i * 3 + 2] = normal[2];
+    normals[v1i * 3] += normal[0];
+    normals[v1i * 3 + 1] += normal[1];
+    normals[v1i * 3 + 2] += normal[2];
 
-    normals[v2i * 3] = normal[0];
-    normals[v2i * 3 + 1] = normal[1];
-    normals[v2i * 3 + 2] = normal[2];
+    normals[v2i * 3] += normal[0];
+    normals[v2i * 3 + 1] += normal[1];
+    normals[v2i * 3 + 2] += normal[2];
 
-    normals[v3i * 3] = normal[0];
-    normals[v3i * 3 + 1] = normal[1];
-    normals[v3i * 3 + 2] = normal[2];
+    normals[v3i * 3] += normal[0];
+    normals[v3i * 3 + 1] += normal[1];
+    normals[v3i * 3 + 2] += normal[2];
+  }
+
+  for (let i = 0; i < normals.length / 3; i++) {
+    const ni = i * 3;
+    vec3.set(normal, normals[ni], normals[ni + 1], normals[ni + 2]);
+
+    vec3.normalize(normal, normal);
+
+    normals[ni] = normal[0];
+    normals[ni + 1] = normal[1];
+    normals[ni + 2] = normal[2];
   }
 
   return normals;
+}
+
+export function calculateTangents(
+  vertices: Float32Array,
+  indices: Uint32Array,
+  uvs: Float32Array
+): {
+  tangents: Float32Array;
+  bitangents: Float32Array;
+} {
+  return { tangents: new Float32Array(), bitangents: new Float32Array() };
 }

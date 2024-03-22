@@ -5,7 +5,12 @@ import {
   makeShaderDataDefinitions,
   makeStructuredView,
 } from "webgpu-utils";
-import { calculateNormals, createBuffer, loadModel } from "./utility";
+import {
+  calculateNormals,
+  calculateTangents,
+  createBuffer,
+  loadModel,
+} from "./utility";
 import { multisampleCount } from "./constants";
 import { mat4 } from "gl-matrix";
 
@@ -48,11 +53,30 @@ export class CubeMapReflectionRenderer {
     });
     device.queue.writeBuffer(objectDataBuffer, 0, objectData.arrayBuffer);
 
-    let { vertices, indices, uvs, normals } = await loadModel(
-      "smoothSphere.glb"
-    );
+    let { vertices, indices, uvs, normals, tangents, bitangents } =
+      await loadModel("tangents.glb");
 
-    normals = calculateNormals(vertices, indices);
+    if (!uvs) {
+      console.log("model missing texurecoords");
+    }
+
+    if (!normals) {
+      console.log("model missing normals. calculating new normals.");
+      normals = calculateNormals(vertices, indices);
+    }
+
+    if (!tangents || !bitangents) {
+      if (uvs) {
+        console.log(
+          "model missing tangents or bitangents. calculating new tangents"
+        );
+        ({ tangents, bitangents } = calculateTangents(vertices, indices, uvs));
+      } else {
+        console.log(
+          "model missing tangents or bitangents, but new tangents cannot be calculated because the model is also missing uvs"
+        );
+      }
+    }
 
     const vertexBuffer = createBuffer(device, vertices, GPUBufferUsage.VERTEX);
     const uvBuffer = createBuffer(device, uvs, GPUBufferUsage.VERTEX);

@@ -43,11 +43,11 @@ fn vert(i: VertexInput) -> VertexOutput {
 
 @fragment
 fn frag(i: VertexOutput) -> @location(0) vec4f {
-    let textureNormal = normalize(textureSample(normalTexture, textureSampler, i.uv).xyz * 2 - 1);
+//    let textureNormal = normalize(textureSample(normalTexture, textureSampler, i.uv).xyz * 2 - 1);
 
-    let worldNormal = normalize(i.worldNormal);
-    let eyeToSurfaceDir = normalize(i.worldPosition - cameraData.position);
-    var direction = reflect(eyeToSurfaceDir, worldNormal);
+//    let worldNormal = normalize(i.worldNormal);
+//    let eyeToSurfaceDir = normalize(i.worldPosition - cameraData.position);
+//    var direction = reflect(eyeToSurfaceDir, worldNormal);
 
 //    const randomMagnitude = 0.025;
 //    const halfRandomMagnitude = randomMagnitude / 2;
@@ -61,8 +61,9 @@ fn frag(i: VertexOutput) -> @location(0) vec4f {
 //
 //    return vec4(reflectionColor * vec3(0.7, 0.7, 0.65), 1);
 
-    var light = dot(worldNormal, normalize(vec3(1, 1, 0)));
-    return vec4(light, light, light, 1);
+//    var light = dot(worldNormal, normalize(-vec3(-1, -1, 0)));
+//    return vec4(light, light, light, 1);
+    return vec4(i.worldNormal + 1 * 0.5, 1);
 }
 
 fn rand(co: vec2f) -> f32 {
