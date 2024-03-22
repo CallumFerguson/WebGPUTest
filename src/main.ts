@@ -9,6 +9,9 @@ import { fixedDeltaTime, multisampleCount } from "./constants";
 import { BoundsRenderer } from "./BoundsRenderer";
 import { CubeMapReflectionRenderer } from "./CubeMapReflectionRenderer";
 import { SkyboxRenderer } from "./SkyboxRenderer";
+import { ParticleRender } from "./ParticleRender";
+import { FullscreenTextureRenderer } from "./FullscreenTextureRenderer";
+import { ParticleComputer } from "./ParticleComputer";
 
 async function main() {
   const { gpu, device } = await getDevice();

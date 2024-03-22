@@ -55,6 +55,11 @@ export class FullscreenTextureRenderer {
       multisample: {
         count: multisampleCount,
       },
+      depthStencil: {
+        depthWriteEnabled: false,
+        depthCompare: "always",
+        format: "depth24plus",
+      },
     };
     const pipeline = device.createRenderPipeline(pipelineDescriptor);
 
