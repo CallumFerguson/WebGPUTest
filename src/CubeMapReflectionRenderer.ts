@@ -40,6 +40,7 @@ export class CubeMapReflectionRenderer {
 
     const normalTexture = await createTextureFromImage(device, "normal.png", {
       mips: true,
+      flipY: true,
     });
 
     const defs = makeShaderDataDefinitions(cubeMapReflectionShaderString);
