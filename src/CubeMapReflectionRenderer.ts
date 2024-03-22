@@ -79,9 +79,16 @@ export class CubeMapReflectionRenderer {
     }
 
     const vertexBuffer = createBuffer(device, vertices, GPUBufferUsage.VERTEX);
+    const indexBuffer = createBuffer(device, indices, GPUBufferUsage.INDEX);
+
     const uvBuffer = createBuffer(device, uvs, GPUBufferUsage.VERTEX);
     const normalBuffer = createBuffer(device, normals, GPUBufferUsage.VERTEX);
-    const indexBuffer = createBuffer(device, indices, GPUBufferUsage.INDEX);
+    const tangentBuffer = createBuffer(device, tangents, GPUBufferUsage.VERTEX);
+    const bitangentBuffer = createBuffer(
+      device,
+      bitangents,
+      GPUBufferUsage.VERTEX
+    );
 
     const shaderModule = device.createShaderModule({
       code: cubeMapReflectionShaderString,
@@ -144,6 +151,14 @@ export class CubeMapReflectionRenderer {
             arrayStride: 2 * 4,
             attributes: [{ shaderLocation: 2, offset: 0, format: "float32x2" }],
           },
+          {
+            arrayStride: 3 * 4,
+            attributes: [{ shaderLocation: 3, offset: 0, format: "float32x3" }],
+          },
+          {
+            arrayStride: 3 * 4,
+            attributes: [{ shaderLocation: 4, offset: 0, format: "float32x3" }],
+          },
         ],
       },
       fragment: {
@@ -197,6 +212,8 @@ export class CubeMapReflectionRenderer {
       renderPassEncoder.setVertexBuffer(0, vertexBuffer);
       renderPassEncoder.setVertexBuffer(1, normalBuffer);
       renderPassEncoder.setVertexBuffer(2, uvBuffer);
+      renderPassEncoder.setVertexBuffer(3, tangentBuffer);
+      renderPassEncoder.setVertexBuffer(4, bitangentBuffer);
       renderPassEncoder.setIndexBuffer(indexBuffer, "uint32");
       renderPassEncoder.drawIndexed(indices.length);
     };

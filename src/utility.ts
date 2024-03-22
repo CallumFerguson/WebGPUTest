@@ -1,4 +1,4 @@
-import { mat4, vec3 } from "gl-matrix";
+import { mat4, vec3, vec2 } from "gl-matrix";
 
 export type BufferBundle = {
   buffer: GPUBuffer;
@@ -134,12 +134,12 @@ export async function loadModel(fileName: string): Promise<{
 
   let tangents = undefined;
   if (mesh.tangents) {
-    tangents = mesh.tangents;
+    tangents = new Float32Array(mesh.tangents);
   }
 
   let bitangents = undefined;
   if (mesh.bitangents) {
-    bitangents = mesh.bitangents;
+    bitangents = new Float32Array(mesh.bitangents);
   }
 
   return {
@@ -193,8 +193,8 @@ export function calculateNormals(
     );
   }
 
-  const a = vec3.create();
-  const b = vec3.create();
+  const edge1 = vec3.create();
+  const edge2 = vec3.create();
 
   const v1 = vec3.create();
   const v2 = vec3.create();
@@ -227,9 +227,9 @@ export function calculateNormals(
       vertices[v3i * 3 + 2]
     );
 
-    vec3.sub(a, v2, v1);
-    vec3.sub(b, v3, v1);
-    vec3.cross(normal, a, b);
+    vec3.sub(edge1, v2, v1);
+    vec3.sub(edge2, v3, v1);
+    vec3.cross(normal, edge1, edge2);
     vec3.normalize(normal, normal);
 
     normals[v1i * 3] += normal[0];
@@ -267,5 +267,123 @@ export function calculateTangents(
   tangents: Float32Array;
   bitangents: Float32Array;
 } {
-  return { tangents: new Float32Array(), bitangents: new Float32Array() };
+  if (indices.length % 3 !== 0) {
+    throw new Error(
+      `calculateTangents indices length ${indices.length} should be a multiple of 3`
+    );
+  }
+
+  const edge1 = vec3.create();
+  const edge2 = vec3.create();
+  const deltaUV1 = vec2.create();
+  const deltaUV2 = vec2.create();
+
+  const v1 = vec3.create();
+  const v2 = vec3.create();
+  const v3 = vec3.create();
+
+  const uv1 = vec2.create();
+  const uv2 = vec2.create();
+  const uv3 = vec2.create();
+
+  const tangent = vec3.create();
+  const bitangent = vec3.create();
+
+  const tangents = new Float32Array(vertices.length);
+  const bitangents = new Float32Array(vertices.length);
+
+  for (let i = 0; i < indices.length / 3; i++) {
+    const v1i = indices[i * 3];
+    vec3.set(
+      v1,
+      vertices[v1i * 3],
+      vertices[v1i * 3 + 1],
+      vertices[v1i * 3 + 2]
+    );
+    const v2i = indices[i * 3 + 1];
+    vec3.set(
+      v2,
+      vertices[v2i * 3],
+      vertices[v2i * 3 + 1],
+      vertices[v2i * 3 + 2]
+    );
+    const v3i = indices[i * 3 + 2];
+    vec3.set(
+      v3,
+      vertices[v3i * 3],
+      vertices[v3i * 3 + 1],
+      vertices[v3i * 3 + 2]
+    );
+
+    vec3.sub(edge1, v2, v1);
+    vec3.sub(edge2, v3, v1);
+
+    vec2.set(uv1, uvs[v1i * 2], uvs[v1i * 2 + 1]);
+    vec2.set(uv2, uvs[v2i * 2], uvs[v2i * 2 + 1]);
+    vec2.set(uv3, uvs[v3i * 2], uvs[v3i * 2 + 1]);
+
+    vec2.sub(deltaUV1, uv2, uv1);
+    vec2.sub(deltaUV2, uv3, uv1);
+
+    const f = 1 / (deltaUV1[0] * deltaUV2[1] - deltaUV2[0] * deltaUV1[1]);
+
+    vec3.set(
+      tangent,
+      f * (deltaUV2[1] * edge1[0] - deltaUV1[1] * edge2[0]),
+      f * (deltaUV2[1] * edge1[1] - deltaUV1[1] * edge2[1]),
+      f * (deltaUV2[1] * edge1[2] - deltaUV1[1] * edge2[2])
+    );
+
+    vec3.set(
+      bitangent,
+      f * (-deltaUV2[0] * edge1[0] + deltaUV1[0] * edge2[0]),
+      f * (-deltaUV2[0] * edge1[1] + deltaUV1[0] * edge2[1]),
+      f * (-deltaUV2[0] * edge1[2] + deltaUV1[0] * edge2[2])
+    );
+
+    tangents[v1i * 3] += tangent[0];
+    tangents[v1i * 3 + 1] += tangent[1];
+    tangents[v1i * 3 + 2] += tangent[2];
+
+    tangents[v2i * 3] += tangent[0];
+    tangents[v2i * 3 + 1] += tangent[1];
+    tangents[v2i * 3 + 2] += tangent[2];
+
+    tangents[v3i * 3] += tangent[0];
+    tangents[v3i * 3 + 1] += tangent[1];
+    tangents[v3i * 3 + 2] += tangent[2];
+
+    bitangents[v1i * 3] += bitangent[0];
+    bitangents[v1i * 3 + 1] += bitangent[1];
+    bitangents[v1i * 3 + 2] += bitangent[2];
+
+    bitangents[v2i * 3] += bitangent[0];
+    bitangents[v2i * 3 + 1] += bitangent[1];
+    bitangents[v2i * 3 + 2] += bitangent[2];
+
+    bitangents[v3i * 3] += bitangent[0];
+    bitangents[v3i * 3 + 1] += bitangent[1];
+    bitangents[v3i * 3 + 2] += bitangent[2];
+  }
+
+  for (let i = 0; i < vertices.length / 3; i++) {
+    const vi = i * 3;
+    vec3.set(tangent, tangents[vi], tangents[vi + 1], tangents[vi + 2]);
+
+    vec3.normalize(tangent, tangent);
+
+    tangents[vi] = tangent[0];
+    tangents[vi + 1] = tangent[1];
+    tangents[vi + 2] = tangent[2];
+
+    vec3.set(bitangent, bitangents[vi], bitangents[vi + 1], bitangents[vi + 2]);
+
+    vec3.normalize(bitangent, bitangent);
+
+    bitangents[vi] = bitangent[0];
+    bitangents[vi + 1] = bitangent[1];
+    bitangents[vi + 2] = bitangent[2];
+  }
+
+  return { tangents, bitangents };
 }

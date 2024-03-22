@@ -20,6 +20,8 @@ struct VertexInput {
     @location(0) position: vec4f,
     @location(1) normal: vec3f,
     @location(2) uv: vec2f,
+    @location(3) tangent: vec3f,
+    @location(4) bitangent: vec3f,
 }
 
 struct VertexOutput {
