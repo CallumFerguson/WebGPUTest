@@ -69,7 +69,7 @@ async function main() {
   function calculateViewProjection() {
     mat4.perspectiveZO(
       projection,
-      90,
+      (Math.PI / 180) * 90,
       canvas.width / canvas.height,
       0.01,
       1000
