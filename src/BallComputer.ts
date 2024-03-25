@@ -190,7 +190,11 @@ export class BallComputer {
       //   (Math.PI / 180) * -20 * fixedDeltaTime
       // );
       const rotateBy = mat4.create();
-      mat4.rotateZ(rotateBy, rotateBy, (Math.PI / 180) * -20 * fixedDeltaTime);
+      mat4.rotateZ(
+        rotateBy,
+        rotateBy,
+        (Math.PI / 180) * -20 * fixedDeltaTime * numFixedUpdatesThisFrame
+      );
       mat4.mul(bounds.rotation, rotateBy, bounds.rotation);
       //
       // bounds.center[0] = Math.cos(currentTime * 0.25) * 50;

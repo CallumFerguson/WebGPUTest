@@ -5,7 +5,12 @@ import { Bounds, clamp, getDevice } from "./utility";
 import { makeShaderDataDefinitions, makeStructuredView } from "webgpu-utils";
 import { BallRenderer } from "./BallRenderer";
 import { BallComputer } from "./BallComputer";
-import { fixedDeltaTime, multisampleCount } from "./constants";
+import {
+  fixedDeltaTime,
+  largestAllowedDeltaTime,
+  maxFixedUpdatesPerFrame,
+  multisampleCount,
+} from "./constants";
 import { BoundsRenderer } from "./BoundsRenderer";
 import { CubeMapReflectionRenderer } from "./CubeMapReflectionRenderer";
 import { SkyboxRenderer } from "./SkyboxRenderer";
@@ -158,41 +163,41 @@ async function main() {
   // );
   // renderFunctions.push(fullscreenTextureRenderer.render);
 
-  // const rotation = mat4.create();
-  // mat4.rotateZ(rotation, rotation, -((Math.PI / 180) * 45) / 2);
-  // mat4.rotateX(rotation, rotation, -((Math.PI / 180) * 45) / 2);
-  // const bounds: Bounds = {
-  //   size: [50, 50, 50],
-  //   center: [0, 0, 0],
-  //   rotation,
-  // };
-  //
-  // const numObjects = 64 * 5; // 50
-  // const ballRenderer = new BallRenderer();
-  // await ballRenderer.init(
-  //   device,
-  //   presentationFormat,
-  //   cameraDataBuffer,
-  //   numObjects
-  // );
-  // fixedUpdateFunctions.push(ballRenderer.fixedUpdate);
-  // renderFunctions.push(ballRenderer.render);
-  //
-  // const ballComputer = new BallComputer(
-  //   device,
-  //   ballRenderer.positionBufferBundles,
-  //   numObjects,
-  //   bounds
-  // );
-  // computeFunctions.push(ballComputer.compute);
-  //
-  // const boundsRenderer = new BoundsRenderer(
-  //   device,
-  //   presentationFormat,
-  //   cameraDataBuffer,
-  //   ballComputer.simulationInfoBuffer
-  // );
-  // renderFunctions.push(boundsRenderer.render);
+  const rotation = mat4.create();
+  mat4.rotateZ(rotation, rotation, -((Math.PI / 180) * 45) / 2);
+  mat4.rotateX(rotation, rotation, -((Math.PI / 180) * 45) / 2);
+  const bounds: Bounds = {
+    size: [50, 50, 50],
+    center: [0, 0, 0],
+    rotation,
+  };
+
+  const numObjects = 64 * 5; // 50
+  const ballRenderer = new BallRenderer();
+  await ballRenderer.init(
+    device,
+    presentationFormat,
+    cameraDataBuffer,
+    numObjects
+  );
+  fixedUpdateFunctions.push(ballRenderer.fixedUpdate);
+  renderFunctions.push(ballRenderer.render);
+
+  const ballComputer = new BallComputer(
+    device,
+    ballRenderer.positionBufferBundles,
+    numObjects,
+    bounds
+  );
+  computeFunctions.push(ballComputer.compute);
+
+  const boundsRenderer = new BoundsRenderer(
+    device,
+    presentationFormat,
+    cameraDataBuffer,
+    ballComputer.simulationInfoBuffer
+  );
+  renderFunctions.push(boundsRenderer.render);
 
   const cubeMapReflectionRenderer = new CubeMapReflectionRenderer();
   await cubeMapReflectionRenderer.init(
@@ -327,19 +332,30 @@ async function main() {
 
   const objectModelTmp = mat4.create();
 
-  const maxFixedUpdatesPerFrame = 10;
-  let simulationBehind = false;
+  let currentTime = 0;
 
-  let previousTime = 0;
+  let lastRealTimeSinceStart = 0;
   let accumulatedTime = 0;
-  async function render(currentTime: number) {
-    currentTime *= 0.001;
-    const deltaTime = currentTime - previousTime;
+  async function render(realTimeSinceStart: number) {
+    realTimeSinceStart *= 0.001;
+    const realDeltaTime = realTimeSinceStart - lastRealTimeSinceStart;
+    const deltaTime = Math.min(realDeltaTime, largestAllowedDeltaTime);
     accumulatedTime += deltaTime;
     let mouseDeltaX = lastMouseX - mouseX;
     let mouseDeltaY = lastMouseY - mouseY;
 
-    // console.log(1 / deltaTime);
+    currentTime += deltaTime;
+
+    // console.log(1 / realDeltaTime);
+
+    const simulationSpeed = deltaTime / realDeltaTime;
+    if (simulationSpeed !== 1) {
+      console.log(
+        `simulation running at ${
+          Math.round(simulationSpeed * 1000) / 10
+        }% normal speed.`
+      );
+    }
 
     handleCanvasResize();
 
@@ -389,26 +405,17 @@ async function main() {
 
     let numFixedUpdatesThisFrame = 0;
     while (accumulatedTime >= fixedDeltaTime) {
-      if (numFixedUpdatesThisFrame >= maxFixedUpdatesPerFrame) {
-        console.log(
-          "numFixedUpdatesThisFrame exceeded maxFixedUpdatesPerFrame."
-        );
-        break;
-      }
+      // if (numFixedUpdatesThisFrame >= maxFixedUpdatesPerFrame) {
+      //   console.log(
+      //     "numFixedUpdatesThisFrame exceeded maxFixedUpdatesPerFrame."
+      //   );
+      //   break;
+      // }
       numFixedUpdatesThisFrame++;
       fixedUpdateFunctions.forEach((fixedUpdateFunction) => {
         fixedUpdateFunction(fixedDeltaTime);
       });
       accumulatedTime -= fixedDeltaTime;
-    }
-    if (accumulatedTime >= fixedDeltaTime) {
-      console.log(
-        `simulation is ${accumulatedTime - fixedDeltaTime} seconds behind`
-      );
-      simulationBehind = true;
-    } else if (simulationBehind) {
-      simulationBehind = false;
-      console.log("simulation caught up");
     }
     // console.log(numFixedUpdatesThisFrame);
 
@@ -474,7 +481,7 @@ async function main() {
 
     device.queue.submit([commandEncoder.finish()]);
 
-    previousTime = currentTime;
+    lastRealTimeSinceStart = realTimeSinceStart;
     lastMouseX = mouseX;
     lastMouseY = mouseY;
     requestAnimationFrame(render);
