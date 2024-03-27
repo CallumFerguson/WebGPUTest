@@ -8,15 +8,12 @@ import { BallComputer } from "./BallComputer";
 import {
   fixedDeltaTime,
   largestAllowedDeltaTime,
-  maxFixedUpdatesPerFrame,
   multisampleCount,
 } from "./constants";
 import { BoundsRenderer } from "./BoundsRenderer";
 import { CubeMapReflectionRenderer } from "./CubeMapReflectionRenderer";
 import { SkyboxRenderer } from "./SkyboxRenderer";
-import { ParticleRender } from "./ParticleRender";
-import { FullscreenTextureRenderer } from "./FullscreenTextureRenderer";
-import { ParticleComputer } from "./ParticleComputer";
+import { GLTFRenderer } from "./GLTFRenderer";
 
 async function main() {
   const { gpu, device } = await getDevice();
@@ -163,49 +160,53 @@ async function main() {
   // );
   // renderFunctions.push(fullscreenTextureRenderer.render);
 
-  const rotation = mat4.create();
-  mat4.rotateZ(rotation, rotation, -((Math.PI / 180) * 45) / 2);
-  mat4.rotateX(rotation, rotation, -((Math.PI / 180) * 45) / 2);
-  const bounds: Bounds = {
-    size: [50, 50, 50],
-    center: [0, 0, 0],
-    rotation,
-  };
+  // const rotation = mat4.create();
+  // mat4.rotateZ(rotation, rotation, -((Math.PI / 180) * 45) / 2);
+  // mat4.rotateX(rotation, rotation, -((Math.PI / 180) * 45) / 2);
+  // const bounds: Bounds = {
+  //   size: [50, 50, 50],
+  //   center: [0, 0, 0],
+  //   rotation,
+  // };
+  //
+  // const numObjects = 64 * 5; // 50
+  // const ballRenderer = new BallRenderer();
+  // await ballRenderer.init(
+  //   device,
+  //   presentationFormat,
+  //   cameraDataBuffer,
+  //   numObjects
+  // );
+  // fixedUpdateFunctions.push(ballRenderer.fixedUpdate);
+  // renderFunctions.push(ballRenderer.render);
+  //
+  // const ballComputer = new BallComputer(
+  //   device,
+  //   ballRenderer.positionBufferBundles,
+  //   numObjects,
+  //   bounds
+  // );
+  // computeFunctions.push(ballComputer.compute);
+  //
+  // const boundsRenderer = new BoundsRenderer(
+  //   device,
+  //   presentationFormat,
+  //   cameraDataBuffer,
+  //   ballComputer.simulationInfoBuffer
+  // );
+  // renderFunctions.push(boundsRenderer.render);
+  //
+  // const cubeMapReflectionRenderer = new CubeMapReflectionRenderer();
+  // await cubeMapReflectionRenderer.init(
+  //   device,
+  //   presentationFormat,
+  //   cameraDataBuffer
+  // );
+  // renderFunctions.push(cubeMapReflectionRenderer.render!);
 
-  const numObjects = 64 * 5; // 50
-  const ballRenderer = new BallRenderer();
-  await ballRenderer.init(
-    device,
-    presentationFormat,
-    cameraDataBuffer,
-    numObjects
-  );
-  fixedUpdateFunctions.push(ballRenderer.fixedUpdate);
-  renderFunctions.push(ballRenderer.render);
-
-  const ballComputer = new BallComputer(
-    device,
-    ballRenderer.positionBufferBundles,
-    numObjects,
-    bounds
-  );
-  computeFunctions.push(ballComputer.compute);
-
-  const boundsRenderer = new BoundsRenderer(
-    device,
-    presentationFormat,
-    cameraDataBuffer,
-    ballComputer.simulationInfoBuffer
-  );
-  renderFunctions.push(boundsRenderer.render);
-
-  const cubeMapReflectionRenderer = new CubeMapReflectionRenderer();
-  await cubeMapReflectionRenderer.init(
-    device,
-    presentationFormat,
-    cameraDataBuffer
-  );
-  renderFunctions.push(cubeMapReflectionRenderer.render!);
+  const gltfRenderer = new GLTFRenderer();
+  await gltfRenderer.init(device, presentationFormat, cameraDataBuffer);
+  renderFunctions.push(gltfRenderer.render!);
 
   const skyboxRenderer = new SkyboxRenderer();
   await skyboxRenderer.init(device, presentationFormat, cameraDataBuffer);
@@ -334,6 +335,8 @@ async function main() {
 
   let currentTime = 0;
 
+  let simulationRunningSlow = false;
+
   let lastRealTimeSinceStart = 0;
   let accumulatedTime = 0;
   async function render(realTimeSinceStart: number) {
@@ -350,11 +353,15 @@ async function main() {
 
     const simulationSpeed = deltaTime / realDeltaTime;
     if (simulationSpeed !== 1) {
+      simulationRunningSlow = true;
       console.log(
         `simulation running at ${
           Math.round(simulationSpeed * 1000) / 10
         }% normal speed.`
       );
+    } else if (simulationRunningSlow) {
+      simulationRunningSlow = false;
+      console.log(`simulation running at 100% normal speed.`);
     }
 
     handleCanvasResize();
