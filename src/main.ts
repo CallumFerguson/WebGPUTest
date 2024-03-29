@@ -1,4 +1,4 @@
-import pointParticleShaderString from "../shaders/pointParticle.wgsl?raw";
+import cameraDataShaderString from "../shaders/cameraData.wgsl?raw";
 import computeParticleShaderString from "../shaders/computeParticle.wgsl?raw";
 import { mat4, vec3, vec4, quat } from "gl-matrix";
 import { clamp, getDevice } from "./utility";
@@ -119,8 +119,8 @@ async function main() {
   }
   calculateViewProjection();
 
-  const defs = makeShaderDataDefinitions(pointParticleShaderString);
-  const cameraData = makeStructuredView(defs.uniforms.cameraData);
+  const cameraDataDefs = makeShaderDataDefinitions(cameraDataShaderString);
+  const cameraData = makeStructuredView(cameraDataDefs.structs.CameraData);
   const cameraDataBuffer = device.createBuffer({
     size: cameraData.arrayBuffer.byteLength,
     usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,

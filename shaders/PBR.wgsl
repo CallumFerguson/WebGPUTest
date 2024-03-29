@@ -1,10 +1,3 @@
-struct CameraData {
-    view: mat4x4f,
-    projection: mat4x4f,
-    position: vec3f,
-    viewDirectionProjectionInverse: mat4x4f,
-}
-
 struct ObjectData {
     model: mat4x4f,
 }
@@ -75,7 +68,15 @@ fn frag(i: VertexOutput) -> @location(0) vec4f {
     var fragColor = albedo * reflectionColor * light;
     fragColor += emission;
 
-    return vec4(pow(fragColor.rgb, vec3(1.0/gamma)), 1);
+//    return vec4(pow(fragColor.rgb, vec3(1.0/gamma)), 1);
+
+//    let viewNormal = cameraData.view * vec4(worldNormal, 0);
+
+    let r = vec3(1.0, 0.71, 0.29);
+    var a = 1 - dot(worldNormal, -eyeToSurfaceDir);
+    a = pow(a, 5);
+    let b = r + (1 - r) * a;
+    return vec4(mix(albedo, reflectionColor, b), 1);
 }
 
 //fn rand(co: vec2f) -> f32 {

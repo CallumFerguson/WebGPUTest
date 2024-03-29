@@ -1,3 +1,4 @@
+import cameraDataShaderString from "../shaders/cameraData.wgsl?raw";
 import cubeMapReflectionShaderString from "../shaders/cubeMapReflection.wgsl?raw";
 import {
   createTextureFromImage,
@@ -43,7 +44,9 @@ export class CubeMapReflectionRenderer {
       flipY: true,
     });
 
-    const defs = makeShaderDataDefinitions(cubeMapReflectionShaderString);
+    const defs = makeShaderDataDefinitions(
+      cameraDataShaderString + cubeMapReflectionShaderString
+    );
     const objectData = makeStructuredView(defs.uniforms.objectData);
     const objectDataBuffer = device.createBuffer({
       size: objectData.arrayBuffer.byteLength,
@@ -92,7 +95,7 @@ export class CubeMapReflectionRenderer {
     );
 
     const shaderModule = device.createShaderModule({
-      code: cubeMapReflectionShaderString,
+      code: cameraDataShaderString + cubeMapReflectionShaderString,
     });
 
     const bindGroupLayoutGroup0 = device.createBindGroupLayout({

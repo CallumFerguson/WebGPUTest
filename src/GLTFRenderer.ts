@@ -1,4 +1,5 @@
 import pbrShaderString from "../shaders/PBR.wgsl?raw";
+import cameraDataShaderString from "../shaders/cameraData.wgsl?raw";
 import {
   createTextureFromImage,
   createTextureFromImages,
@@ -13,6 +14,8 @@ import {
 } from "./utility";
 import { multisampleCount } from "./constants";
 import { mat4, vec3 } from "gl-matrix";
+
+const shaderString: string = cameraDataShaderString + pbrShaderString;
 
 export class GLTFRenderer {
   render: ((renderPassEncoder: GPURenderPassEncoder) => void) | undefined =
@@ -39,7 +42,7 @@ export class GLTFRenderer {
       }
     );
 
-    const defs = makeShaderDataDefinitions(pbrShaderString);
+    const defs = makeShaderDataDefinitions(shaderString);
     const objectData = makeStructuredView(defs.uniforms.objectData);
     const objectDataBuffer = device.createBuffer({
       size: objectData.arrayBuffer.byteLength,
@@ -100,7 +103,7 @@ export class GLTFRenderer {
     );
 
     const shaderModule = device.createShaderModule({
-      code: pbrShaderString,
+      code: shaderString,
     });
 
     const bindGroupLayoutGroup0 = device.createBindGroupLayout({

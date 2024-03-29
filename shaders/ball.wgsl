@@ -1,10 +1,3 @@
-struct CameraData {
-    view: mat4x4f,
-    projection: mat4x4f,
-    position: vec3f,
-    viewDirectionProjectionInverse: mat4x4f,
-}
-
 struct Body {
     position: vec3f,
     radius: f32,

@@ -1,3 +1,4 @@
+import cameraDataShaderString from "../shaders/cameraData.wgsl?raw";
 import skyboxShaderString from "../shaders/skybox.wgsl?raw";
 import { createTextureFromImages } from "webgpu-utils";
 import { multisampleCount } from "./constants";
@@ -27,7 +28,7 @@ export class SkyboxRenderer {
     );
 
     const shaderModule = device.createShaderModule({
-      code: skyboxShaderString,
+      code: cameraDataShaderString + skyboxShaderString,
     });
 
     const bindGroupLayoutGroup0 = device.createBindGroupLayout({

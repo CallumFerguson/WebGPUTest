@@ -104,7 +104,7 @@ export async function loadModel(fileName: string): Promise<{
 
         // parse the result json
         let resultJson = JSON.parse(jsonContent);
-        console.log(resultJson);
+        // console.log(resultJson);
         resolve(resultJson);
       });
   });
