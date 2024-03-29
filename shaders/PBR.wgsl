@@ -9,12 +9,16 @@ struct ObjectData {
     model: mat4x4f,
 }
 
-@group(0) @binding(0) var texture: texture_cube<f32>;
-@group(0) @binding(1) var textureSampler: sampler;
-@group(0) @binding(2) var<uniform> cameraData: CameraData;
-@group(0) @binding(3) var normalTexture: texture_2d<f32>;
+@group(0) @binding(0) var<uniform> cameraData: CameraData;
 
-@group(1) @binding(0) var<uniform> objectData: ObjectData;
+@group(1) @binding(0) var textureSampler: sampler;
+@group(1) @binding(1) var albedoTexture: texture_2d<f32>;
+@group(1) @binding(2) var emissionTexture: texture_2d<f32>;
+@group(1) @binding(3) var normalTexture: texture_2d<f32>;
+@group(1) @binding(4) var occlusionRoughnessMetalicTexture: texture_2d<f32>;
+@group(1) @binding(5) var environmentCubeMapTexture: texture_cube<f32>;
+
+@group(2) @binding(0) var<uniform> objectData: ObjectData;
 
 struct VertexInput {
     @location(0) position: vec4f,
@@ -49,28 +53,36 @@ fn vert(i: VertexInput) -> VertexOutput {
 
 @fragment
 fn frag(i: VertexOutput) -> @location(0) vec4f {
+    const gamma = 2.2;
+
+    let albedo = pow(textureSample(albedoTexture, textureSampler, i.uv).rgb, vec3(gamma));
+
+    let emission = textureSample(emissionTexture, textureSampler, i.uv).rgb;
+    let occlusionRoughnessMetalic = textureSample(occlusionRoughnessMetalicTexture, textureSampler, i.uv).rgb;
+
     let TBN = mat3x3(i.tangnet, i.bitangent, i.normal);
-    let textureNormal = textureSample(normalTexture, textureSampler, i.uv).xyz * 2 - 1;
+    let textureNormal = textureSample(normalTexture, textureSampler, i.uv).rgb * 2 - 1;
     let worldNormal = normalize(TBN * textureNormal);
 
     let eyeToSurfaceDir = normalize(i.worldPosition - cameraData.position);
-    var direction = reflect(eyeToSurfaceDir, worldNormal);
+    var reflectionDirection = reflect(eyeToSurfaceDir, worldNormal);
 
+    let reflectionColor = textureSample(environmentCubeMapTexture, textureSampler, reflectionDirection * vec3(-1, 1, 1)).rgb;
+
+    var light = dot(worldNormal, normalize(-vec3(-1, -1, 0)));
+    light = clamp(light, 0.05, 1);
+    light = min(light, occlusionRoughnessMetalic.r);
+    var fragColor = albedo * reflectionColor * light;
+    fragColor += emission;
+
+    return vec4(pow(fragColor.rgb, vec3(1.0/gamma)), 1);
+}
+
+//fn rand(co: vec2f) -> f32 {
+//    return fract(sin(dot(co, vec2(12.9898, 78.233))) * 43758.5453);
+//}
 //    const randomMagnitude = 0.025;
 //    const halfRandomMagnitude = randomMagnitude / 2;
 //    direction.x += rand(direction.xy) * randomMagnitude - halfRandomMagnitude;
 //    direction.y += rand(direction.yz) * randomMagnitude - halfRandomMagnitude;
 //    direction.z += rand(direction.zx) * randomMagnitude - halfRandomMagnitude;
-
-    let reflectionColor = textureSample(texture, textureSampler, direction * vec3(-1, 1, 1)).rgb;
-
-//    return vec4(reflectionColor * vec3(0.7, 0.7, 0.65), 1);
-
-    var light = dot(worldNormal, normalize(-vec3(-1, -1, 0)));
-    light = clamp(light, 0.1, 1);
-    return vec4(vec3(1, 0.5, 0) * light, 1);
-}
-
-fn rand(co: vec2f) -> f32 {
-    return fract(sin(dot(co, vec2(12.9898, 78.233))) * 43758.5453);
-}

@@ -66,7 +66,7 @@ export async function loadModel(fileName: string): Promise<{
   indices: Uint32Array;
   normals: Float32Array | undefined;
   uvs: Float32Array | undefined;
-  textureURI: string | undefined;
+  textureURIs: string[];
   tangents: Float32Array | undefined;
   bitangents: Float32Array | undefined;
 }> {
@@ -104,7 +104,7 @@ export async function loadModel(fileName: string): Promise<{
 
         // parse the result json
         let resultJson = JSON.parse(jsonContent);
-        // console.log(resultJson);
+        console.log(resultJson);
         resolve(resultJson);
       });
   });
@@ -124,12 +124,15 @@ export async function loadModel(fileName: string): Promise<{
   }
   const indices = Uint32Array.from(mesh.faces.flat());
 
-  let textureURI;
-  if (resultJson.textures && resultJson.textures.length > 0) {
-    const textureJson = resultJson.textures[0];
-    textureURI = `data:image/${textureJson.formathint};base64,${textureJson.data}`;
-  } else {
-    textureURI = "";
+  let textures = resultJson.textures;
+  let textureURIs: string[] = [];
+  if (textures) {
+    for (let i = 0; i < textures.length; i++) {
+      const textureJson = textures[i];
+      textureURIs.push(
+        `data:image/${textureJson.formathint};base64,${textureJson.data}`
+      );
+    }
   }
 
   let tangents = undefined;
@@ -147,7 +150,7 @@ export async function loadModel(fileName: string): Promise<{
     indices,
     normals,
     uvs,
-    textureURI,
+    textureURIs,
     tangents,
     bitangents,
   };

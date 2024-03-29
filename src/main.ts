@@ -1,17 +1,13 @@
 import pointParticleShaderString from "../shaders/pointParticle.wgsl?raw";
 import computeParticleShaderString from "../shaders/computeParticle.wgsl?raw";
 import { mat4, vec3, vec4, quat } from "gl-matrix";
-import { Bounds, clamp, getDevice } from "./utility";
+import { clamp, getDevice } from "./utility";
 import { makeShaderDataDefinitions, makeStructuredView } from "webgpu-utils";
-import { BallRenderer } from "./BallRenderer";
-import { BallComputer } from "./BallComputer";
 import {
   fixedDeltaTime,
   largestAllowedDeltaTime,
   multisampleCount,
 } from "./constants";
-import { BoundsRenderer } from "./BoundsRenderer";
-import { CubeMapReflectionRenderer } from "./CubeMapReflectionRenderer";
 import { SkyboxRenderer } from "./SkyboxRenderer";
 import { GLTFRenderer } from "./GLTFRenderer";
 
@@ -205,7 +201,12 @@ async function main() {
   // renderFunctions.push(cubeMapReflectionRenderer.render!);
 
   const gltfRenderer = new GLTFRenderer();
-  await gltfRenderer.init(device, presentationFormat, cameraDataBuffer);
+  await gltfRenderer.init(
+    "BoomBox.glb",
+    device,
+    presentationFormat,
+    cameraDataBuffer
+  );
   renderFunctions.push(gltfRenderer.render!);
 
   const skyboxRenderer = new SkyboxRenderer();

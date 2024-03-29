@@ -12,18 +12,19 @@ import {
   loadModel,
 } from "./utility";
 import { multisampleCount } from "./constants";
-import { mat4 } from "gl-matrix";
+import { mat4, vec3 } from "gl-matrix";
 
 export class GLTFRenderer {
   render: ((renderPassEncoder: GPURenderPassEncoder) => void) | undefined =
     undefined;
 
   async init(
+    modelName: string,
     device: GPUDevice,
     presentationFormat: GPUTextureFormat,
     cameraDataBuffer: GPUBuffer
   ) {
-    const texture = await createTextureFromImages(
+    const environmentCubeMapTexture = await createTextureFromImages(
       device,
       [
         "Yokohama/posx.jpg",
@@ -38,24 +39,22 @@ export class GLTFRenderer {
       }
     );
 
-    const normalTexture = await createTextureFromImage(device, "normal.png", {
-      mips: true,
-      flipY: true,
-    });
-
     const defs = makeShaderDataDefinitions(pbrShaderString);
     const objectData = makeStructuredView(defs.uniforms.objectData);
     const objectDataBuffer = device.createBuffer({
       size: objectData.arrayBuffer.byteLength,
       usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
     });
+    const model = mat4.create();
+    const scale = 100;
+    mat4.fromScaling(model, vec3.fromValues(scale, scale, scale));
     objectData.set({
-      model: mat4.create(),
+      model: model,
     });
     device.queue.writeBuffer(objectDataBuffer, 0, objectData.arrayBuffer);
 
-    let { vertices, indices, uvs, normals, tangents, bitangents } =
-      await loadModel("tangents.glb");
+    let { vertices, indices, uvs, normals, tangents, bitangents, textureURIs } =
+      await loadModel(modelName);
 
     if (!uvs) {
       console.log("model missing texurecoords");
@@ -79,6 +78,15 @@ export class GLTFRenderer {
       }
     }
 
+    let textures = await Promise.all(
+      textureURIs.map((textureURI) => {
+        return createTextureFromImage(device, textureURI, {
+          mips: true,
+          flipY: true,
+        });
+      })
+    );
+
     const vertexBuffer = createBuffer(device, vertices, GPUBufferUsage.VERTEX);
     const indexBuffer = createBuffer(device, indices, GPUBufferUsage.INDEX);
 
@@ -99,28 +107,48 @@ export class GLTFRenderer {
       entries: [
         {
           binding: 0,
-          visibility: GPUShaderStage.FRAGMENT,
-          texture: { viewDimension: "cube" },
+          visibility: GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT,
+          buffer: {},
         },
+      ],
+    });
+
+    const bindGroupLayoutGroup1 = device.createBindGroupLayout({
+      entries: [
         {
-          binding: 1,
+          binding: 0,
           visibility: GPUShaderStage.FRAGMENT,
           sampler: {},
         },
         {
+          binding: 1,
+          visibility: GPUShaderStage.FRAGMENT,
+          texture: {},
+        },
+        {
           binding: 2,
-          visibility: GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT,
-          buffer: {},
+          visibility: GPUShaderStage.FRAGMENT,
+          texture: {},
         },
         {
           binding: 3,
           visibility: GPUShaderStage.FRAGMENT,
           texture: {},
         },
+        {
+          binding: 4,
+          visibility: GPUShaderStage.FRAGMENT,
+          texture: {},
+        },
+        {
+          binding: 5,
+          visibility: GPUShaderStage.FRAGMENT,
+          texture: { viewDimension: "cube" },
+        },
       ],
     });
 
-    const bindGroupLayoutGroup1 = device.createBindGroupLayout({
+    const bindGroupLayoutGroup2 = device.createBindGroupLayout({
       entries: [
         {
           binding: 0,
@@ -131,7 +159,11 @@ export class GLTFRenderer {
     });
 
     const pipelineLayout = device.createPipelineLayout({
-      bindGroupLayouts: [bindGroupLayoutGroup0, bindGroupLayoutGroup1],
+      bindGroupLayouts: [
+        bindGroupLayoutGroup0,
+        bindGroupLayoutGroup1,
+        bindGroupLayoutGroup2,
+      ],
     });
 
     const pipelineDescriptor: GPURenderPipelineDescriptor = {
@@ -193,16 +225,26 @@ export class GLTFRenderer {
 
     let bindGroup0 = device.createBindGroup({
       layout: bindGroupLayoutGroup0,
-      entries: [
-        { binding: 0, resource: texture.createView({ dimension: "cube" }) },
-        { binding: 1, resource: sampler },
-        { binding: 2, resource: { buffer: cameraDataBuffer } },
-        { binding: 3, resource: normalTexture.createView() },
-      ],
+      entries: [{ binding: 0, resource: { buffer: cameraDataBuffer } }],
     });
 
     let bindGroup1 = device.createBindGroup({
       layout: bindGroupLayoutGroup1,
+      entries: [
+        { binding: 0, resource: sampler },
+        { binding: 1, resource: textures[0].createView() },
+        { binding: 2, resource: textures[3].createView() },
+        { binding: 3, resource: textures[2].createView() },
+        { binding: 4, resource: textures[1].createView() },
+        {
+          binding: 5,
+          resource: environmentCubeMapTexture.createView({ dimension: "cube" }),
+        },
+      ],
+    });
+
+    let bindGroup2 = device.createBindGroup({
+      layout: bindGroupLayoutGroup2,
       entries: [{ binding: 0, resource: { buffer: objectDataBuffer } }],
     });
 
@@ -210,6 +252,7 @@ export class GLTFRenderer {
       renderPassEncoder.setPipeline(pipeline);
       renderPassEncoder.setBindGroup(0, bindGroup0);
       renderPassEncoder.setBindGroup(1, bindGroup1);
+      renderPassEncoder.setBindGroup(2, bindGroup2);
       renderPassEncoder.setVertexBuffer(0, vertexBuffer);
       renderPassEncoder.setVertexBuffer(1, normalBuffer);
       renderPassEncoder.setVertexBuffer(2, uvBuffer);
