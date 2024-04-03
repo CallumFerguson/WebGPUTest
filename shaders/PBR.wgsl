@@ -112,22 +112,22 @@ fn frag(i: VertexOutput) -> @location(0) vec4f {
         // calculate per-light radiance
         let L = normalize(lightPositions[n] - i.worldPosition);
         let H = normalize(V + L);
-        let distance    = length(lightPositions[n] - i.worldPosition);
+        let distance = length(lightPositions[n] - i.worldPosition);
         let attenuation = 1.0 / (distance * distance);
-        let radiance     = lightColors[n] * attenuation;
+        let radiance = lightColors[n] * attenuation;
 
         // cook-torrance brdf
         let NDF = distributionGGX(N, H, roughness);
-        let G   = geometrySmith(N, V, L, roughness);
-        let F    = fresnelSchlick(max(dot(H, V), 0.0), F0);
+        let G = geometrySmith(N, V, L, roughness);
+        let F = fresnelSchlick(max(dot(H, V), 0.0), F0);
 
         let kS = F;
         var kD = vec3(1.0) - kS;
         kD *= 1.0 - metallic;
 
-        let numerator    = NDF * G * F;
+        let numerator = NDF * G * F;
         let denominator = 4.0 * max(dot(N, V), 0.0) * max(dot(N, L), 0.0) + 0.0001;
-        let specular     = numerator / denominator;
+        let specular = numerator / denominator;
 
         // add to outgoing radiance Lo
         let NdotL = max(dot(N, L), 0.0);
