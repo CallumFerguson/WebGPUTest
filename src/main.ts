@@ -209,9 +209,9 @@ async function main() {
   );
   renderFunctions.push(gltfRenderer.render!);
 
-  const skyboxRenderer = new SkyboxRenderer();
-  await skyboxRenderer.init(device, presentationFormat, cameraDataBuffer);
-  renderFunctions.push(skyboxRenderer.render!);
+  // const skyboxRenderer = new SkyboxRenderer();
+  // await skyboxRenderer.init(device, presentationFormat, cameraDataBuffer);
+  // renderFunctions.push(skyboxRenderer.render!);
 
   function resizeCanvasIfNeeded(): boolean {
     const width = Math.max(

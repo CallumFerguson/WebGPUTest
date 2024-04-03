@@ -49,10 +49,14 @@ export class GLTFRenderer {
       usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
     });
     const model = mat4.create();
+    const normalMatrix = mat4.create();
     const scale = 100;
     mat4.fromScaling(model, vec3.fromValues(scale, scale, scale));
+    mat4.invert(normalMatrix, model);
+    mat4.transpose(normalMatrix, normalMatrix);
     objectData.set({
-      model: model,
+      model,
+      normalMatrix,
     });
     device.queue.writeBuffer(objectDataBuffer, 0, objectData.arrayBuffer);
 
