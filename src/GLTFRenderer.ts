@@ -64,8 +64,8 @@ export class GLTFRenderer {
         mat4.fromTranslation(
           model,
           vec3.fromValues(
-            (col - nrColumns / 2) * spacing,
-            (row - nrRows / 2) * spacing,
+            (col - nrColumns / 2) * spacing + spacing / 2,
+            (row - nrRows / 2) * spacing + spacing / 2,
             0
           )
         );

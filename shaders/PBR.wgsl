@@ -62,7 +62,7 @@ fn frag(i: VertexOutput) -> @location(0) vec4f {
     const gamma = 2.2;
 
 //    let albedo = pow(textureSample(albedoTexture, textureSampler, i.uv).rgb, vec3(gamma));
-    let albedo: vec3f = vec3(1, 0, 0);
+    let albedo: vec3f = vec3(0.5, 0, 0);
 
 //    let emission = pow(textureSample(emissionTexture, textureSampler, i.uv).rgb, vec3(gamma));
     let emission: vec3f = vec3(0, 0, 0);
