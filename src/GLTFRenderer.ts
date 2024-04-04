@@ -9,6 +9,7 @@ import {
 import {
   calculateNormals,
   calculateTangents,
+  clamp,
   createBuffer,
   loadModel,
 } from "./utility";
@@ -42,22 +43,55 @@ export class GLTFRenderer {
       }
     );
 
+    const nrRows = 7;
+    const nrColumns = 7;
+    const spacing = 2.5;
+
+    const objectDataArray: {
+      model: mat4;
+      normalMatrix: mat4;
+      metallic: number;
+      roughness: number;
+    }[] = [];
+    for (let row = 0; row < nrRows; row++) {
+      const metallic = row / nrRows;
+      for (let col = 0; col < nrColumns; col++) {
+        // we clamp the roughness to 0.05 - 1.0 as perfectly smooth surfaces (roughness of 0.0) tend to look a bit off
+        // on direct lighting.
+        const roughness = clamp(col / nrColumns, 0.05, 1);
+
+        const model = mat4.create();
+        mat4.fromTranslation(
+          model,
+          vec3.fromValues(
+            (col - nrColumns / 2) * spacing,
+            (row - nrRows / 2) * spacing,
+            0
+          )
+        );
+        const normalMatrix = mat4.create();
+        mat4.invert(normalMatrix, model);
+        mat4.transpose(normalMatrix, normalMatrix);
+
+        objectDataArray.push({
+          model,
+          normalMatrix,
+          metallic,
+          roughness,
+        });
+      }
+    }
+
     const defs = makeShaderDataDefinitions(shaderString);
-    const objectData = makeStructuredView(defs.uniforms.objectData);
+    const objectData = makeStructuredView(
+      defs.storages.objectData,
+      new ArrayBuffer(defs.structs.ObjectData.size * nrRows * nrColumns)
+    );
     const objectDataBuffer = device.createBuffer({
       size: objectData.arrayBuffer.byteLength,
-      usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
+      usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
     });
-    const model = mat4.create();
-    const normalMatrix = mat4.create();
-    const scale = 100;
-    mat4.fromScaling(model, vec3.fromValues(scale, scale, scale));
-    mat4.invert(normalMatrix, model);
-    mat4.transpose(normalMatrix, normalMatrix);
-    objectData.set({
-      model,
-      normalMatrix,
-    });
+    objectData.set(objectDataArray);
     device.queue.writeBuffer(objectDataBuffer, 0, objectData.arrayBuffer);
 
     let { vertices, indices, uvs, normals, tangents, bitangents, textureURIs } =
@@ -84,6 +118,8 @@ export class GLTFRenderer {
         );
       }
     }
+
+    textureURIs = ["normal.png", "normal.png", "normal.png", "normal.png"];
 
     let textures = await Promise.all(
       textureURIs.map((textureURI) => {
@@ -160,7 +196,7 @@ export class GLTFRenderer {
         {
           binding: 0,
           visibility: GPUShaderStage.VERTEX,
-          buffer: {},
+          buffer: { type: "read-only-storage" },
         },
       ],
     });
@@ -266,7 +302,7 @@ export class GLTFRenderer {
       renderPassEncoder.setVertexBuffer(3, tangentBuffer);
       renderPassEncoder.setVertexBuffer(4, bitangentBuffer);
       renderPassEncoder.setIndexBuffer(indexBuffer, "uint32");
-      renderPassEncoder.drawIndexed(indices.length);
+      renderPassEncoder.drawIndexed(indices.length, nrRows * nrColumns);
     };
   }
 }

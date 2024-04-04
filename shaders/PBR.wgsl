@@ -3,6 +3,8 @@ const PI = 3.14159265359;
 struct ObjectData {
     model: mat4x4f,
     normalMatrix: mat4x4f,
+    metallic: f32,
+    roughness: f32,
 }
 
 @group(0) @binding(0) var<uniform> cameraData: CameraData;
@@ -14,9 +16,11 @@ struct ObjectData {
 @group(1) @binding(4) var occlusionRoughnessMetalicTexture: texture_2d<f32>;
 @group(1) @binding(5) var environmentCubeMapTexture: texture_cube<f32>;
 
-@group(2) @binding(0) var<uniform> objectData: ObjectData;
+//@group(2) @binding(0) var<uniform> objectData: ObjectData;
+@group(2) @binding(0) var<storage, read> objectData: array<ObjectData>;
 
 struct VertexInput {
+    @builtin(instance_index) instanceIndex: u32,
     @location(0) position: vec4f,
     @location(1) normal: vec3f,
     @location(2) uv: vec2f,
@@ -31,10 +35,14 @@ struct VertexOutput {
     @location(2) tangnet: vec3f,
     @location(3) bitangent: vec3f,
     @location(4) normal: vec3f,
+    @location(5) metallic: f32,
+    @location(6) roughness: f32,
 }
 
 @vertex
 fn vert(i: VertexInput) -> VertexOutput {
+    let objectData = objectData[i.instanceIndex];
+
     var o: VertexOutput;
 
     o.fragPosition = cameraData.projection * cameraData.view * objectData.model * i.position;
@@ -43,6 +51,8 @@ fn vert(i: VertexInput) -> VertexOutput {
     o.tangnet = normalize((objectData.normalMatrix * vec4(i.tangent, 0)).xyz);
     o.bitangent = normalize((objectData.normalMatrix * vec4(i.bitangent, 0)).xyz);
     o.normal = normalize((objectData.normalMatrix * vec4(i.normal, 0)).xyz);
+    o.metallic = objectData.metallic;
+    o.roughness = objectData.roughness;
 
     return o;
 }
@@ -51,14 +61,18 @@ fn vert(i: VertexInput) -> VertexOutput {
 fn frag(i: VertexOutput) -> @location(0) vec4f {
     const gamma = 2.2;
 
-    let albedo = pow(textureSample(albedoTexture, textureSampler, i.uv).rgb, vec3(gamma));
+//    let albedo = pow(textureSample(albedoTexture, textureSampler, i.uv).rgb, vec3(gamma));
+    let albedo: vec3f = vec3(1, 0, 0);
 
-    let emission = pow(textureSample(emissionTexture, textureSampler, i.uv).rgb, vec3(gamma));
-    let occlusionRoughnessMetalic = textureSample(occlusionRoughnessMetalicTexture, textureSampler, i.uv).rgb;
+//    let emission = pow(textureSample(emissionTexture, textureSampler, i.uv).rgb, vec3(gamma));
+    let emission: vec3f = vec3(0, 0, 0);
+//    let occlusionRoughnessMetalic = textureSample(occlusionRoughnessMetalicTexture, textureSampler, i.uv).rgb;
+    let occlusionRoughnessMetalic: vec3f = vec3(1, i.roughness, i.metallic);
 
     let TBN = mat3x3(i.tangnet, i.bitangent, i.normal);
-    let textureNormal = textureSample(normalTexture, textureSampler, i.uv).rgb * 2 - 1;
-    let worldNormal = normalize(TBN * textureNormal);
+//    let tangentSpaceNormal = textureSample(normalTexture, textureSampler, i.uv).rgb * 2 - 1;
+    let tangentSpaceNormal: vec3f = vec3(0, 0, 1);
+    let worldNormal = normalize(TBN * tangentSpaceNormal);
 
 //    let eyeToSurfaceDir = normalize(i.worldPosition - cameraData.position);
 //    var reflectionDirection = reflect(eyeToSurfaceDir, worldNormal);
@@ -82,17 +96,17 @@ fn frag(i: VertexOutput) -> @location(0) vec4f {
 //    return vec4(vec3(b), 1);
 
     const lightPositions = array<vec3f, 4>(
-        vec3f(4, -1, 1),
-        vec3f(4, 1, 1),
-        vec3f(4, 1, -1),
-        vec3f(4, -1, -1)
+        vec3f(-10, 10, 10),
+        vec3f(10, 10, 10),
+        vec3f(-10, -10, 10),
+        vec3f(10, -10, 10)
     );
 
     const lightColors = array<vec3f, 4>(
-        vec3f(1, 0, 0),
-        vec3f(0, 1, 0),
-        vec3f(0, 0, 1),
-        vec3f(1, 1, 1)
+        vec3f(300, 300, 300),
+        vec3f(300, 300, 300),
+        vec3f(300, 300, 300),
+        vec3f(300, 300, 300)
     );
 
     let metallic = occlusionRoughnessMetalic.b;

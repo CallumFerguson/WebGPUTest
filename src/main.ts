@@ -202,7 +202,7 @@ async function main() {
 
   const gltfRenderer = new GLTFRenderer();
   await gltfRenderer.init(
-    "BoomBox.glb",
+    "tangents.glb",
     device,
     presentationFormat,
     cameraDataBuffer
