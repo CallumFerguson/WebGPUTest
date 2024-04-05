@@ -1,4 +1,4 @@
-@group(0) @binding(0) var texture: texture_cube<f32>;
+@group(0) @binding(0) var texture: texture_2d<f32>;
 @group(0) @binding(1) var textureSampler: sampler;
 @group(0) @binding(2) var<uniform> cameraData: CameraData;
 
@@ -29,6 +29,8 @@ fn vert(i: VertexInput) -> VertexOutput {
 
 @fragment
 fn frag(i: VertexOutput) -> @location(0) vec4f {
-    let t = cameraData.viewDirectionProjectionInverse * i.pos;
-    return textureSample(texture, textureSampler, normalize(t.xyz / t.w) * vec3f(-1, 1, 1));
+//    let t = cameraData.viewDirectionProjectionInverse * i.pos;
+//    return textureSample(texture, textureSampler, normalize(t.xyz / t.w) * vec3f(-1, 1, 1));
+    return textureSample(texture, textureSampler, i.pos.xy);
+//    return vec4(1, 1, 0, 1);
 }

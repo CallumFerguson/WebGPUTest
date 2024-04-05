@@ -1,4 +1,3 @@
-import fullscreenTextureShaderString from "../shaders/fullscreenTexture.wgsl?raw";
 import { multisampleCount } from "./constants";
 
 export class FullscreenTextureRenderer {
@@ -7,10 +6,11 @@ export class FullscreenTextureRenderer {
   constructor(
     device: GPUDevice,
     presentationFormat: GPUTextureFormat,
-    textureView: GPUTextureView
+    textureView: GPUTextureView,
+    shaderString: string
   ) {
     const shaderModule = device.createShaderModule({
-      code: fullscreenTextureShaderString,
+      code: shaderString,
     });
 
     const bindGroupLayoutGroup0 = device.createBindGroupLayout({

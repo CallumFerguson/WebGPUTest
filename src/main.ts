@@ -13,6 +13,7 @@ import { GLTFRenderer } from "./GLTFRenderer";
 import { parseHDR } from "./parseHDR";
 import { CubeMap } from "./CubeMap";
 import { FullscreenTextureRenderer } from "./FullscreenTextureRenderer";
+import fullscreenTextureShaderString from "../shaders/fullscreenTexture.wgsl?raw";
 
 async function main() {
   const { gpu, device } = await getDevice();
@@ -204,20 +205,28 @@ async function main() {
   // renderFunctions.push(cubeMapReflectionRenderer.render!);
 
   const cubeMap = new CubeMap();
-  await cubeMap.init(device, "symmetrical_garden_02_1k.hdr");
+  await cubeMap.init(device, cameraDataBuffer, "symmetrical_garden_02_1k.hdr");
 
-  const gltfRenderer = new GLTFRenderer();
-  await gltfRenderer.init(
-    "tangents.glb",
+  const fullscreenTextureRenderer = new FullscreenTextureRenderer(
     device,
     presentationFormat,
-    cameraDataBuffer
+    cubeMap.texture!.createView(),
+    fullscreenTextureShaderString
   );
-  renderFunctions.push(gltfRenderer.render!);
+  renderFunctions.push(fullscreenTextureRenderer.render);
 
-  const skyboxRenderer = new SkyboxRenderer();
-  await skyboxRenderer.init(device, presentationFormat, cameraDataBuffer);
-  renderFunctions.push(skyboxRenderer.render!);
+  // const gltfRenderer = new GLTFRenderer();
+  // await gltfRenderer.init(
+  //   "tangents.glb",
+  //   device,
+  //   presentationFormat,
+  //   cameraDataBuffer
+  // );
+  // renderFunctions.push(gltfRenderer.render!);
+  //
+  // const skyboxRenderer = new SkyboxRenderer();
+  // await skyboxRenderer.init(device, presentationFormat, cameraDataBuffer);
+  // renderFunctions.push(skyboxRenderer.render!);
 
   function resizeCanvasIfNeeded(): boolean {
     const width = Math.max(
