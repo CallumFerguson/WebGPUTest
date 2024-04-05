@@ -10,6 +10,9 @@ import {
 } from "./constants";
 import { SkyboxRenderer } from "./SkyboxRenderer";
 import { GLTFRenderer } from "./GLTFRenderer";
+import { parseHDR } from "./parseHDR";
+import { CubeMap } from "./CubeMap";
+import { FullscreenTextureRenderer } from "./FullscreenTextureRenderer";
 
 async function main() {
   const { gpu, device } = await getDevice();
@@ -57,7 +60,7 @@ async function main() {
 
   let cameraModel = mat4.create();
   let cameraRotation = quat.create();
-  let cameraPosition = vec3.fromValues(0, 0, 5);
+  let cameraPosition = vec3.fromValues(0, 0, 15);
 
   let view = mat4.create();
   let viewDirectionProjectionInverse = mat4.create();
@@ -200,6 +203,9 @@ async function main() {
   // );
   // renderFunctions.push(cubeMapReflectionRenderer.render!);
 
+  const cubeMap = new CubeMap();
+  await cubeMap.init(device, "symmetrical_garden_02_1k.hdr");
+
   const gltfRenderer = new GLTFRenderer();
   await gltfRenderer.init(
     "tangents.glb",
@@ -209,9 +215,9 @@ async function main() {
   );
   renderFunctions.push(gltfRenderer.render!);
 
-  // const skyboxRenderer = new SkyboxRenderer();
-  // await skyboxRenderer.init(device, presentationFormat, cameraDataBuffer);
-  // renderFunctions.push(skyboxRenderer.render!);
+  const skyboxRenderer = new SkyboxRenderer();
+  await skyboxRenderer.init(device, presentationFormat, cameraDataBuffer);
+  renderFunctions.push(skyboxRenderer.render!);
 
   function resizeCanvasIfNeeded(): boolean {
     const width = Math.max(
