@@ -43,7 +43,7 @@ export class CubeMap {
 
     const equirectangularTexture = device.createTexture({
       size: { width: hdr.width, height: hdr.height },
-      format: "rgba32float",
+      format: "rgba16float",
       usage:
         GPUTextureUsage.RENDER_ATTACHMENT |
         GPUTextureUsage.TEXTURE_BINDING |
@@ -53,7 +53,7 @@ export class CubeMap {
     device.queue.writeTexture(
       { texture: equirectangularTexture },
       hdr.data.buffer,
-      { bytesPerRow: 16 * hdr.width },
+      { bytesPerRow: 8 * hdr.width },
       { width: hdr.width, height: hdr.height }
     );
 
@@ -68,12 +68,12 @@ export class CubeMap {
         {
           binding: 0,
           visibility: GPUShaderStage.FRAGMENT,
-          texture: { sampleType: "unfilterable-float" },
+          texture: {},
         },
         {
           binding: 1,
           visibility: GPUShaderStage.FRAGMENT,
-          sampler: { type: "non-filtering" },
+          sampler: {},
         },
         {
           binding: 2,
@@ -116,8 +116,8 @@ export class CubeMap {
     const pipeline = device.createRenderPipeline(pipelineDescriptor);
 
     const sampler = device.createSampler({
-      magFilter: "nearest",
-      minFilter: "nearest",
+      magFilter: "linear",
+      minFilter: "linear",
     });
 
     const cameraDataDefs = makeShaderDataDefinitions(cameraDataShaderString);
