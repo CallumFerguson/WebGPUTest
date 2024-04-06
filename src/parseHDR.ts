@@ -1,7 +1,6 @@
 // whole file from https://github.com/tchayen/pbr-webgpu/blob/main/src/lib/parseHDR.ts
 
 // Based on https://github.com/vorg/parse-hdr
-import { Float16Array } from "@petamoriken/float16";
 
 let radiancePattern = "#\\?RADIANCE";
 let commentPattern = "#.*";
@@ -61,7 +60,7 @@ export async function parseHDR(url: string) {
 
   readPixelsRawRLE(buffer, data, 0, fileOffset, scanlineWidth, scanlinesCount);
 
-  let floatData = new Float16Array(width * height * 4);
+  let floatData = new Float32Array(width * height * 4);
   for (let offset = 0; offset < data.length; offset += 4) {
     let r = data[offset + 0] / 255;
     let g = data[offset + 1] / 255;

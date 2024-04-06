@@ -1,20 +1,49 @@
 import cameraDataShaderString from "../shaders/cameraData.wgsl?raw";
 import equirectangularSkyboxShaderString from "../shaders/equirectangularSkybox.wgsl?raw";
 import { parseHDR } from "./parseHDR";
-import { multisampleCount } from "./constants";
+import { makeShaderDataDefinitions, makeStructuredView } from "webgpu-utils";
+import { mat4, vec3 } from "gl-matrix";
+
+const views: mat4[] = [
+  mat4.fromRotation(
+    mat4.create(),
+    (Math.PI / 180) * 90,
+    vec3.fromValues(0, 1, 0)
+  ),
+  mat4.fromRotation(
+    mat4.create(),
+    (Math.PI / 180) * -90,
+    vec3.fromValues(0, 1, 0)
+  ),
+  mat4.fromRotation(
+    mat4.create(),
+    (Math.PI / 180) * -90,
+    vec3.fromValues(1, 0, 0)
+  ),
+  mat4.fromRotation(
+    mat4.create(),
+    (Math.PI / 180) * 90,
+    vec3.fromValues(1, 0, 0)
+  ),
+  mat4.fromRotation(
+    mat4.create(),
+    (Math.PI / 180) * 180,
+    vec3.fromValues(0, 1, 0)
+  ),
+  mat4.fromRotation(mat4.create(), 0, vec3.fromValues(0, 1, 0)),
+];
 
 export class CubeMap {
-  texture: GPUTexture | undefined;
+  textures: GPUTexture[] = [];
 
-  render: ((renderPassEncoder: GPURenderPassEncoder) => void) | undefined =
-    undefined;
+  async init(device: GPUDevice, imageURI: string) {
+    const cubeMapFacePixelLength = 2048;
 
-  async init(device: GPUDevice, cameraDataBuffer: GPUBuffer, imageURI: string) {
     const hdr = await parseHDR(imageURI);
 
     const equirectangularTexture = device.createTexture({
       size: { width: hdr.width, height: hdr.height },
-      format: "rgba16float",
+      format: "rgba32float",
       usage:
         GPUTextureUsage.RENDER_ATTACHMENT |
         GPUTextureUsage.TEXTURE_BINDING |
@@ -24,9 +53,11 @@ export class CubeMap {
     device.queue.writeTexture(
       { texture: equirectangularTexture },
       hdr.data.buffer,
-      { bytesPerRow: 8 * hdr.width },
+      { bytesPerRow: 16 * hdr.width },
       { width: hdr.width, height: hdr.height }
     );
+
+    const equirectangularTextureView = equirectangularTexture.createView();
 
     const shaderModule = device.createShaderModule({
       code: cameraDataShaderString + equirectangularSkyboxShaderString,
@@ -37,12 +68,12 @@ export class CubeMap {
         {
           binding: 0,
           visibility: GPUShaderStage.FRAGMENT,
-          texture: {},
+          texture: { sampleType: "unfilterable-float" },
         },
         {
           binding: 1,
           visibility: GPUShaderStage.FRAGMENT,
-          sampler: {},
+          sampler: { type: "non-filtering" },
         },
         {
           binding: 2,
@@ -57,13 +88,6 @@ export class CubeMap {
     });
 
     const textureFormat = "rgba8unorm";
-    const renderTexture = device.createTexture({
-      size: [512, 512],
-      format: textureFormat,
-      usage:
-        GPUTextureUsage.RENDER_ATTACHMENT | GPUTextureUsage.TEXTURE_BINDING,
-    });
-    this.texture = renderTexture;
 
     const pipelineDescriptor: GPURenderPipelineDescriptor = {
       layout: pipelineLayout,
@@ -77,7 +101,7 @@ export class CubeMap {
         entryPoint: "frag",
         targets: [
           {
-            format: "bgra8unorm",
+            format: textureFormat,
           },
         ],
       },
@@ -86,59 +110,90 @@ export class CubeMap {
         cullMode: "back",
       },
       multisample: {
-        count: 4,
-      },
-      depthStencil: {
-        depthWriteEnabled: true,
-        depthCompare: "less-equal",
-        format: "depth24plus",
+        count: 1,
       },
     };
     const pipeline = device.createRenderPipeline(pipelineDescriptor);
 
     const sampler = device.createSampler({
-      magFilter: "linear",
-      minFilter: "linear",
+      magFilter: "nearest",
+      minFilter: "nearest",
     });
 
-    let bindGroup0 = device.createBindGroup({
-      layout: bindGroupLayoutGroup0,
-      entries: [
-        { binding: 0, resource: equirectangularTexture.createView() },
-        { binding: 1, resource: sampler },
-        { binding: 2, resource: { buffer: cameraDataBuffer } },
-      ],
+    const cameraDataDefs = makeShaderDataDefinitions(cameraDataShaderString);
+
+    const faces = views.map((view) => {
+      const cameraData = makeStructuredView(cameraDataDefs.structs.CameraData);
+      const cameraDataBuffer = device.createBuffer({
+        size: cameraData.arrayBuffer.byteLength,
+        usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
+      });
+
+      let projection = mat4.create();
+      mat4.perspectiveZO(projection, (Math.PI / 180) * 90, 1, 0.01, 1000);
+      let viewDirectionProjectionInverse = mat4.create();
+
+      mat4.copy(viewDirectionProjectionInverse, view);
+      mat4.mul(
+        viewDirectionProjectionInverse,
+        projection,
+        viewDirectionProjectionInverse
+      );
+      mat4.invert(
+        viewDirectionProjectionInverse,
+        viewDirectionProjectionInverse
+      );
+
+      cameraData.set({
+        viewDirectionProjectionInverse,
+      });
+      device.queue.writeBuffer(cameraDataBuffer, 0, cameraData.arrayBuffer);
+
+      const renderTexture = device.createTexture({
+        size: [cubeMapFacePixelLength, cubeMapFacePixelLength],
+        format: textureFormat,
+        usage:
+          GPUTextureUsage.RENDER_ATTACHMENT | GPUTextureUsage.TEXTURE_BINDING,
+      });
+      this.textures.push(renderTexture);
+
+      let bindGroup = device.createBindGroup({
+        layout: bindGroupLayoutGroup0,
+        entries: [
+          { binding: 0, resource: equirectangularTextureView },
+          { binding: 1, resource: sampler },
+          { binding: 2, resource: { buffer: cameraDataBuffer } },
+        ],
+      });
+
+      const renderPassDescriptor: GPURenderPassDescriptor = {
+        colorAttachments: [
+          {
+            view: renderTexture.createView(),
+            clearValue: { r: 0.0, g: 0.0, b: 0.0, a: 1.0 },
+            loadOp: "clear",
+            storeOp: "store",
+          },
+        ],
+      };
+
+      return { bindGroup, renderPassDescriptor };
     });
 
-    // const renderPassDescriptor: GPURenderPassDescriptor = {
-    //   colorAttachments: [
-    //     {
-    //       view: renderTexture.createView(),
-    //       clearValue: { r: 0.0, g: 0.0, b: 0.0, a: 1.0 },
-    //       loadOp: "clear",
-    //       storeOp: "store",
-    //     },
-    //   ],
-    // };
+    const commandEncoder = device.createCommandEncoder();
 
-    // const commandEncoder = device.createCommandEncoder();
-    //
-    // const renderPassEncoder = commandEncoder.beginRenderPass(
-    //   renderPassDescriptor as GPURenderPassDescriptor
-    // );
-    //
-    // renderPassEncoder.setPipeline(pipeline);
-    // renderPassEncoder.setBindGroup(0, bindGroup0);
-    // renderPassEncoder.draw(3);
-    //
-    // renderPassEncoder.end();
-    //
-    // device.queue.submit([commandEncoder.finish()]);
+    faces.forEach((face) => {
+      const renderPassEncoder = commandEncoder.beginRenderPass(
+        face.renderPassDescriptor
+      );
 
-    this.render = (renderPassEncoder: GPURenderPassEncoder) => {
       renderPassEncoder.setPipeline(pipeline);
-      renderPassEncoder.setBindGroup(0, bindGroup0);
+      renderPassEncoder.setBindGroup(0, face.bindGroup);
       renderPassEncoder.draw(3);
-    };
+
+      renderPassEncoder.end();
+    });
+
+    device.queue.submit([commandEncoder.finish()]);
   }
 }

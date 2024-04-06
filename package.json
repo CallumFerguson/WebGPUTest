@@ -15,7 +15,6 @@
     "vite": "^5.1.0"
   },
   "dependencies": {
-    "@petamoriken/float16": "^3.8.6",
     "gl-matrix": "^3.4.3",
     "webgpu-utils": "^1.5.1"
   }

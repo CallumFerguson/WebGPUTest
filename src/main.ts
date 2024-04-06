@@ -216,25 +216,24 @@ async function main() {
   // renderFunctions.push(cubeMapReflectionRenderer.render!);
 
   const cubeMap = new CubeMap();
-  await cubeMap.init(device, cameraDataBuffer, "symmetrical_garden_02_1k.hdr");
-  renderFunctions.push(cubeMap.render!);
+  await cubeMap.init(device, "symmetrical_garden_02_4k.hdr");
 
-  // const fullscreenTextureRenderer = new FullscreenTextureRenderer(
-  //   device,
-  //   presentationFormat,
-  //   cubeMap.texture!.createView(),
-  //   fullscreenTextureShaderString
-  // );
-  // renderFunctions.push(fullscreenTextureRenderer.render);
-
-  const gltfRenderer = new GLTFRenderer();
-  await gltfRenderer.init(
-    "tangents.glb",
+  const fullscreenTextureRenderer = new FullscreenTextureRenderer(
     device,
     presentationFormat,
-    cameraDataBuffer
+    cubeMap.textures[0].createView(),
+    fullscreenTextureShaderString
   );
-  renderFunctions.push(gltfRenderer.render!);
+  renderFunctions.push(fullscreenTextureRenderer.render);
+
+  // const gltfRenderer = new GLTFRenderer();
+  // await gltfRenderer.init(
+  //   "tangents.glb",
+  //   device,
+  //   presentationFormat,
+  //   cameraDataBuffer
+  // );
+  // renderFunctions.push(gltfRenderer.render!);
   //
   // const skyboxRenderer = new SkyboxRenderer();
   // await skyboxRenderer.init(device, presentationFormat, cameraDataBuffer);
