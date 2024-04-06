@@ -27,10 +27,18 @@ fn vert(i: VertexInput) -> VertexOutput {
     return o;
 }
 
+fn sampleSphericalMap(v: vec3f) -> vec2f {
+    const invAtan = vec2(0.1591, 0.3183);
+    var uv = vec2(atan2(v.z, v.x), asin(v.y));
+    uv *= invAtan;
+    uv += 0.5;
+    return uv;
+}
+
 @fragment
 fn frag(i: VertexOutput) -> @location(0) vec4f {
-//    let t = cameraData.viewDirectionProjectionInverse * i.pos;
-//    return textureSample(texture, textureSampler, normalize(t.xyz / t.w) * vec3f(-1, 1, 1));
-    return textureSample(texture, textureSampler, i.pos.xy);
-//    return vec4(1, 1, 0, 1);
+    let t = cameraData.viewDirectionProjectionInverse * i.pos * vec4(1, -1, 1, 1);
+    let direction = normalize(t.xyz / t.w) * vec3f(-1, 1, 1);
+    let uv = sampleSphericalMap(direction);
+    return textureSample(texture, textureSampler, uv);
 }

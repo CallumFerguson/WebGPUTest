@@ -137,6 +137,17 @@ async function main() {
     usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
   });
 
+  function writeCameraBuffer() {
+    cameraData.set({
+      view,
+      projection,
+      position: cameraWorldPosition,
+      viewDirectionProjectionInverse,
+    });
+    device.queue.writeBuffer(cameraDataBuffer, 0, cameraData.arrayBuffer);
+  }
+  writeCameraBuffer();
+
   // const numObjects = 8000000; // 8000000
   // const particleRenderer = new ParticleRender(
   //   device,
@@ -206,23 +217,24 @@ async function main() {
 
   const cubeMap = new CubeMap();
   await cubeMap.init(device, cameraDataBuffer, "symmetrical_garden_02_1k.hdr");
+  renderFunctions.push(cubeMap.render!);
 
-  const fullscreenTextureRenderer = new FullscreenTextureRenderer(
-    device,
-    presentationFormat,
-    cubeMap.texture!.createView(),
-    fullscreenTextureShaderString
-  );
-  renderFunctions.push(fullscreenTextureRenderer.render);
-
-  // const gltfRenderer = new GLTFRenderer();
-  // await gltfRenderer.init(
-  //   "tangents.glb",
+  // const fullscreenTextureRenderer = new FullscreenTextureRenderer(
   //   device,
   //   presentationFormat,
-  //   cameraDataBuffer
+  //   cubeMap.texture!.createView(),
+  //   fullscreenTextureShaderString
   // );
-  // renderFunctions.push(gltfRenderer.render!);
+  // renderFunctions.push(fullscreenTextureRenderer.render);
+
+  const gltfRenderer = new GLTFRenderer();
+  await gltfRenderer.init(
+    "tangents.glb",
+    device,
+    presentationFormat,
+    cameraDataBuffer
+  );
+  renderFunctions.push(gltfRenderer.render!);
   //
   // const skyboxRenderer = new SkyboxRenderer();
   // await skyboxRenderer.init(device, presentationFormat, cameraDataBuffer);
@@ -453,14 +465,7 @@ async function main() {
       (Math.PI / 180) * deltaTime * 10
     );
 
-    cameraData.set({
-      view,
-      projection,
-      position: cameraWorldPosition,
-      objectModelTmp,
-      viewDirectionProjectionInverse,
-    });
-    device.queue.writeBuffer(cameraDataBuffer, 0, cameraData.arrayBuffer);
+    writeCameraBuffer();
 
     const commandEncoder = device.createCommandEncoder();
 

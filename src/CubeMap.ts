@@ -1,9 +1,13 @@
 import cameraDataShaderString from "../shaders/cameraData.wgsl?raw";
 import equirectangularSkyboxShaderString from "../shaders/equirectangularSkybox.wgsl?raw";
 import { parseHDR } from "./parseHDR";
+import { multisampleCount } from "./constants";
 
 export class CubeMap {
   texture: GPUTexture | undefined;
+
+  render: ((renderPassEncoder: GPURenderPassEncoder) => void) | undefined =
+    undefined;
 
   async init(device: GPUDevice, cameraDataBuffer: GPUBuffer, imageURI: string) {
     const hdr = await parseHDR(imageURI);
@@ -73,7 +77,7 @@ export class CubeMap {
         entryPoint: "frag",
         targets: [
           {
-            format: textureFormat,
+            format: "bgra8unorm",
           },
         ],
       },
@@ -82,7 +86,12 @@ export class CubeMap {
         cullMode: "back",
       },
       multisample: {
-        count: 1,
+        count: 4,
+      },
+      depthStencil: {
+        depthWriteEnabled: true,
+        depthCompare: "less-equal",
+        format: "depth24plus",
       },
     };
     const pipeline = device.createRenderPipeline(pipelineDescriptor);
@@ -101,68 +110,35 @@ export class CubeMap {
       ],
     });
 
-    const renderPassDescriptor: GPURenderPassDescriptor = {
-      colorAttachments: [
-        {
-          view: renderTexture.createView(),
-          clearValue: { r: 0.0, g: 0.0, b: 0.0, a: 1.0 },
-          loadOp: "clear",
-          storeOp: "store",
-        },
-      ],
-    };
+    // const renderPassDescriptor: GPURenderPassDescriptor = {
+    //   colorAttachments: [
+    //     {
+    //       view: renderTexture.createView(),
+    //       clearValue: { r: 0.0, g: 0.0, b: 0.0, a: 1.0 },
+    //       loadOp: "clear",
+    //       storeOp: "store",
+    //     },
+    //   ],
+    // };
 
-    // const gpuReadBuffer = device.createBuffer({
-    //   size: 512 * 512 * 4,
-    //   usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.MAP_READ,
-    // });
-
-    const commandEncoder = device.createCommandEncoder();
-
-    const renderPassEncoder = commandEncoder.beginRenderPass(
-      renderPassDescriptor as GPURenderPassDescriptor
-    );
-
-    renderPassEncoder.setPipeline(pipeline);
-    renderPassEncoder.setBindGroup(0, bindGroup0);
-    renderPassEncoder.draw(3);
-
-    renderPassEncoder.end();
-
-    // commandEncoder.copyTextureToBuffer(
-    //   { texture: renderTexture },
-    //   { buffer: gpuReadBuffer, bytesPerRow: 512 * 4 },
-    //   [512, 512]
+    // const commandEncoder = device.createCommandEncoder();
+    //
+    // const renderPassEncoder = commandEncoder.beginRenderPass(
+    //   renderPassDescriptor as GPURenderPassDescriptor
     // );
+    //
+    // renderPassEncoder.setPipeline(pipeline);
+    // renderPassEncoder.setBindGroup(0, bindGroup0);
+    // renderPassEncoder.draw(3);
+    //
+    // renderPassEncoder.end();
+    //
+    // device.queue.submit([commandEncoder.finish()]);
 
-    device.queue.submit([commandEncoder.finish()]);
-
-    // await gpuReadBuffer.mapAsync(GPUMapMode.READ);
-    //
-    // const data = new Uint8Array(gpuReadBuffer.getMappedRange());
-    //
-    // // const image = await new Jimp({
-    // //   width: 512,
-    // //   height: 512,
-    // //   data,
-    // // });
-    //
-    // return;
-    //
-    // const pngBuffer = await image.getBufferAsync(Jimp.MIME_PNG);
-    //
-    // const blob = new Blob([pngBuffer], { type: "image/png" });
-    // const url = URL.createObjectURL(blob);
-    //
-    // // Create a link and download the PNG
-    // const link = document.createElement("a");
-    // link.href = url;
-    // link.download = "renderedTexture.png";
-    // document.body.appendChild(link);
-    // link.click();
-    // document.body.removeChild(link);
-    //
-    // // Cleanup
-    // gpuReadBuffer.unmap();
+    this.render = (renderPassEncoder: GPURenderPassEncoder) => {
+      renderPassEncoder.setPipeline(pipeline);
+      renderPassEncoder.setBindGroup(0, bindGroup0);
+      renderPassEncoder.draw(3);
+    };
   }
 }
