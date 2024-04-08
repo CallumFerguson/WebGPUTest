@@ -1,5 +1,6 @@
 import cameraDataShaderString from "../shaders/cameraData.wgsl?raw";
 import computeParticleShaderString from "../shaders/computeParticle.wgsl?raw";
+import fullscreenTextureShaderString from "../shaders/fullscreenTexture.wgsl?raw";
 import { mat4, vec3, vec4, quat } from "gl-matrix";
 import { clamp, getDevice } from "./utility";
 import { makeShaderDataDefinitions, makeStructuredView } from "webgpu-utils";
@@ -11,6 +12,7 @@ import {
 import { SkyboxRenderer } from "./SkyboxRenderer";
 import { GLTFRenderer } from "./GLTFRenderer";
 import { CubeMap } from "./CubeMap/CubeMap";
+import { FullscreenTextureRenderer } from "./FullscreenTextureRenderer";
 
 async function main() {
   const { gpu, device } = await getDevice();
@@ -218,11 +220,7 @@ async function main() {
   // const fullscreenTextureRenderer = new FullscreenTextureRenderer(
   //   device,
   //   presentationFormat,
-  //   cubeMap.cubeMapTexture!.createView({
-  //     dimension: "2d",
-  //     baseArrayLayer: 0,
-  //     arrayLayerCount: 1,
-  //   }),
+  //   cubeMap.equirectangularTexture!.createView(),
   //   fullscreenTextureShaderString
   // );
   // renderFunctions.push(fullscreenTextureRenderer.render);

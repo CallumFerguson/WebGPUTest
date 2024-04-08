@@ -1,4 +1,4 @@
-@group(0) @binding(0) var texture: texture_2d<f32>;
+@group(0) @binding(0) var texture: texture_cube<f32>;
 @group(0) @binding(1) var textureSampler: sampler;
 
 @group(1) @binding(0) var<uniform> cameraData: CameraData;
@@ -28,26 +28,9 @@ fn vert(i: VertexInput) -> VertexOutput {
     return o;
 }
 
-fn sampleSphericalMap(v: vec3f) -> vec2f {
-    const invAtan = vec2(0.1591, 0.3183);
-    var uv = vec2(atan2(v.z, v.x), asin(v.y));
-    uv *= invAtan;
-    uv += 0.5;
-    return uv;
-}
-
 @fragment
 fn frag(i: VertexOutput) -> @location(0) vec4f {
-    const gamma: f32 = 2.2;
-    const exposure: f32 = 1;
-
     let t = cameraData.viewDirectionProjectionInverse * i.pos;
-    let direction = normalize(t.xyz / t.w);
-    let uv = sampleSphericalMap(direction);
-    var colorLinear = textureSample(texture, textureSampler, uv).rgb;
-
-//    colorLinear = vec3(1.0) - exp(-colorLinear * exposure);
-//    let color = pow(colorLinear, vec3(1.0 / gamma));
-
+    let colorLinear = textureSample(texture, textureSampler, normalize(t.xyz / t.w) * vec3f(-1, 1, 1)).rgb;
     return vec4(colorLinear, 1);
 }

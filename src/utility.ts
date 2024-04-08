@@ -1,5 +1,7 @@
 import { mat4, vec3, vec2 } from "gl-matrix";
 
+export const DegToRad = Math.PI / 180;
+
 export type BufferBundle = {
   buffer: GPUBuffer;
   bindGroups: GPUBindGroup[];
