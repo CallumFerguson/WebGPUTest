@@ -1,40 +1,14 @@
-import cameraDataShaderString from "../shaders/cameraData.wgsl?raw";
-import equirectangularSkyboxShaderString from "../shaders/equirectangularSkybox.wgsl?raw";
-import { parseHDR } from "./parseHDR";
-import { makeShaderDataDefinitions, makeStructuredView } from "webgpu-utils";
-import { mat4, vec3 } from "gl-matrix";
-
-const views: mat4[] = [
-  mat4.fromRotation(
-    mat4.create(),
-    (Math.PI / 180) * 90,
-    vec3.fromValues(0, 1, 0)
-  ),
-  mat4.fromRotation(
-    mat4.create(),
-    (Math.PI / 180) * -90,
-    vec3.fromValues(0, 1, 0)
-  ),
-  mat4.fromRotation(
-    mat4.create(),
-    (Math.PI / 180) * -90,
-    vec3.fromValues(1, 0, 0)
-  ),
-  mat4.fromRotation(
-    mat4.create(),
-    (Math.PI / 180) * 90,
-    vec3.fromValues(1, 0, 0)
-  ),
-  mat4.fromRotation(mat4.create(), 0, vec3.fromValues(0, 1, 0)),
-  mat4.fromRotation(
-    mat4.create(),
-    (Math.PI / 180) * 180,
-    vec3.fromValues(0, 1, 0)
-  ),
-];
+import cameraDataShaderString from "../../shaders/cameraData.wgsl?raw";
+import equirectangularSkyboxShaderString from "../../shaders/equirectangularSkybox.wgsl?raw";
+import { parseHDR } from "../parseHDR";
+import {
+  getCubeMapCameraDataBindGroupLayout,
+  getCubeMapCameraDataBindGroups,
+} from "./cubeMapCameras";
 
 export class CubeMap {
   cubeMapTexture: GPUTexture | undefined = undefined;
+  irradianceCubeMapTexture: GPUTexture | undefined = undefined;
 
   async init(device: GPUDevice, imageURI: string) {
     const cubeMapFacePixelLength = 2048;
@@ -72,19 +46,16 @@ export class CubeMap {
           visibility: GPUShaderStage.FRAGMENT,
           sampler: {},
         },
-        {
-          binding: 2,
-          visibility: GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT,
-          buffer: {},
-        },
       ],
     });
 
     const pipelineLayout = device.createPipelineLayout({
-      bindGroupLayouts: [bindGroupLayoutGroup0],
+      bindGroupLayouts: [
+        bindGroupLayoutGroup0,
+        getCubeMapCameraDataBindGroupLayout(device),
+      ],
     });
 
-    // const textureFormat = "bgra8unorm";
     const textureFormat = "rgba16float";
 
     const pipelineDescriptor: GPURenderPipelineDescriptor = {
@@ -125,45 +96,22 @@ export class CubeMap {
         GPUTextureUsage.RENDER_ATTACHMENT | GPUTextureUsage.TEXTURE_BINDING,
     });
 
-    const cameraDataDefs = makeShaderDataDefinitions(cameraDataShaderString);
+    // this.irradianceCubeMapTexture = device.createTexture({
+    //   size: [cubeMapFacePixelLength, cubeMapFacePixelLength, 6],
+    //   format: textureFormat,
+    //   usage:
+    //     GPUTextureUsage.RENDER_ATTACHMENT | GPUTextureUsage.TEXTURE_BINDING,
+    // });
 
     const commandEncoder = device.createCommandEncoder();
 
-    for (let i = 0; i < views.length; i++) {
-      const view = views[i];
-
-      const cameraData = makeStructuredView(cameraDataDefs.structs.CameraData);
-      const cameraDataBuffer = device.createBuffer({
-        size: cameraData.arrayBuffer.byteLength,
-        usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
-      });
-
-      let projection = mat4.create();
-      mat4.perspectiveZO(projection, (Math.PI / 180) * 90, 1, 0.01, 1000);
-      let viewDirectionProjectionInverse = mat4.create();
-
-      mat4.copy(viewDirectionProjectionInverse, view);
-      mat4.mul(
-        viewDirectionProjectionInverse,
-        projection,
-        viewDirectionProjectionInverse
-      );
-      mat4.invert(
-        viewDirectionProjectionInverse,
-        viewDirectionProjectionInverse
-      );
-
-      cameraData.set({
-        viewDirectionProjectionInverse,
-      });
-      device.queue.writeBuffer(cameraDataBuffer, 0, cameraData.arrayBuffer);
-
+    const cubeMapCameraDataBindGroups = getCubeMapCameraDataBindGroups(device);
+    for (let i = 0; i < cubeMapCameraDataBindGroups.length; i++) {
       let bindGroup0 = device.createBindGroup({
         layout: bindGroupLayoutGroup0,
         entries: [
           { binding: 0, resource: equirectangularTextureView },
           { binding: 1, resource: sampler },
-          { binding: 2, resource: { buffer: cameraDataBuffer } },
         ],
       });
 
@@ -187,6 +135,7 @@ export class CubeMap {
 
       renderPassEncoder.setPipeline(pipeline);
       renderPassEncoder.setBindGroup(0, bindGroup0);
+      renderPassEncoder.setBindGroup(1, cubeMapCameraDataBindGroups[i]);
       renderPassEncoder.draw(3);
 
       renderPassEncoder.end();

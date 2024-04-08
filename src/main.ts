@@ -10,10 +10,7 @@ import {
 } from "./constants";
 import { SkyboxRenderer } from "./SkyboxRenderer";
 import { GLTFRenderer } from "./GLTFRenderer";
-import { parseHDR } from "./parseHDR";
-import { CubeMap } from "./CubeMap";
-import { FullscreenTextureRenderer } from "./FullscreenTextureRenderer";
-import fullscreenTextureShaderString from "../shaders/fullscreenTexture.wgsl?raw";
+import { CubeMap } from "./CubeMap/CubeMap";
 
 async function main() {
   const { gpu, device } = await getDevice();

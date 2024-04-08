@@ -1,6 +1,7 @@
 @group(0) @binding(0) var texture: texture_2d<f32>;
 @group(0) @binding(1) var textureSampler: sampler;
-@group(0) @binding(2) var<uniform> cameraData: CameraData;
+
+@group(1) @binding(0) var<uniform> cameraData: CameraData;
 
 struct VertexInput {
     @builtin(vertex_index) vertexIndex: u32,
