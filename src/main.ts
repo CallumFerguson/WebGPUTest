@@ -218,26 +218,35 @@ async function main() {
   const cubeMap = new CubeMap();
   await cubeMap.init(device, "symmetrical_garden_02_4k.hdr");
 
-  const fullscreenTextureRenderer = new FullscreenTextureRenderer(
-    device,
-    presentationFormat,
-    cubeMap.textures[0].createView(),
-    fullscreenTextureShaderString
-  );
-  renderFunctions.push(fullscreenTextureRenderer.render);
-
-  // const gltfRenderer = new GLTFRenderer();
-  // await gltfRenderer.init(
-  //   "tangents.glb",
+  // const fullscreenTextureRenderer = new FullscreenTextureRenderer(
   //   device,
   //   presentationFormat,
-  //   cameraDataBuffer
+  //   cubeMap.cubeMapTexture!.createView({
+  //     dimension: "2d",
+  //     baseArrayLayer: 0,
+  //     arrayLayerCount: 1,
+  //   }),
+  //   fullscreenTextureShaderString
   // );
-  // renderFunctions.push(gltfRenderer.render!);
-  //
-  // const skyboxRenderer = new SkyboxRenderer();
-  // await skyboxRenderer.init(device, presentationFormat, cameraDataBuffer);
-  // renderFunctions.push(skyboxRenderer.render!);
+  // renderFunctions.push(fullscreenTextureRenderer.render);
+
+  const gltfRenderer = new GLTFRenderer();
+  await gltfRenderer.init(
+    "tangents.glb",
+    device,
+    presentationFormat,
+    cameraDataBuffer
+  );
+  renderFunctions.push(gltfRenderer.render!);
+
+  const skyboxRenderer = new SkyboxRenderer();
+  await skyboxRenderer.init(
+    device,
+    presentationFormat,
+    cubeMap.cubeMapTexture!,
+    cameraDataBuffer
+  );
+  renderFunctions.push(skyboxRenderer.render!);
 
   function resizeCanvasIfNeeded(): boolean {
     const width = Math.max(

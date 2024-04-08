@@ -1,6 +1,5 @@
 import cameraDataShaderString from "../shaders/cameraData.wgsl?raw";
 import skyboxShaderString from "../shaders/skybox.wgsl?raw";
-import { createTextureFromImages } from "webgpu-utils";
 import { multisampleCount } from "./constants";
 
 export class SkyboxRenderer {
@@ -10,23 +9,9 @@ export class SkyboxRenderer {
   async init(
     device: GPUDevice,
     presentationFormat: GPUTextureFormat,
+    cubeMapTexture: GPUTexture,
     cameraDataBuffer: GPUBuffer
   ) {
-    const texture = await createTextureFromImages(
-      device,
-      [
-        "Yokohama/posx.jpg",
-        "Yokohama/negx.jpg",
-        "Yokohama/posy.jpg",
-        "Yokohama/negy.jpg",
-        "Yokohama/posz.jpg",
-        "Yokohama/negz.jpg",
-      ],
-      {
-        mips: true,
-      }
-    );
-
     const shaderModule = device.createShaderModule({
       code: cameraDataShaderString + skyboxShaderString,
     });
@@ -94,7 +79,10 @@ export class SkyboxRenderer {
     let bindGroup0 = device.createBindGroup({
       layout: bindGroupLayoutGroup0,
       entries: [
-        { binding: 0, resource: texture.createView({ dimension: "cube" }) },
+        {
+          binding: 0,
+          resource: cubeMapTexture.createView({ dimension: "cube" }),
+        },
         { binding: 1, resource: sampler },
         { binding: 2, resource: { buffer: cameraDataBuffer } },
       ],

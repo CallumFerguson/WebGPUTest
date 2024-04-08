@@ -59,7 +59,8 @@ fn vert(i: VertexInput) -> VertexOutput {
 
 @fragment
 fn frag(i: VertexOutput) -> @location(0) vec4f {
-    const gamma = 2.2;
+    const gamma: f32 = 2.2;
+    const exposure: f32 = 1;
 
 //    let albedo = pow(textureSample(albedoTexture, textureSampler, i.uv).rgb, vec3(gamma));
     let albedo: vec3f = vec3(0.5, 0, 0);
@@ -147,8 +148,6 @@ fn frag(i: VertexOutput) -> @location(0) vec4f {
         let NdotL = max(dot(N, L), 0.0);
         Lo += (kD * albedo / PI + specular) * radiance * NdotL;
     }
-
-    const exposure: f32 = 1;
 
     let ambient = vec3(0.03) * albedo * ao;
     var colorLinear = ambient + Lo + emission;

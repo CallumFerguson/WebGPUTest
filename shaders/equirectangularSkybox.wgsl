@@ -37,8 +37,16 @@ fn sampleSphericalMap(v: vec3f) -> vec2f {
 
 @fragment
 fn frag(i: VertexOutput) -> @location(0) vec4f {
+    const gamma: f32 = 2.2;
+    const exposure: f32 = 1;
+
     let t = cameraData.viewDirectionProjectionInverse * i.pos * vec4(1, -1, 1, 1);
     let direction = normalize(t.xyz / t.w) * vec3f(-1, 1, 1);
     let uv = sampleSphericalMap(direction);
-    return textureSample(texture, textureSampler, uv);
+    var colorLinear = textureSample(texture, textureSampler, uv).rgb;
+
+    colorLinear = vec3(1.0) - exp(-colorLinear * exposure);
+    let color = pow(colorLinear, vec3(1.0 / gamma));
+
+    return vec4(color, 1);
 }

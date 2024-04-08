@@ -43,6 +43,7 @@ function toHalf(val: number) {
   bits += m & 1;
   return bits;
 }
+const oneAsHalf = toHalf(1.0);
 
 let radiancePattern = "#\\?RADIANCE";
 let commentPattern = "#.*";
@@ -120,7 +121,7 @@ export async function parseHDR(url: string) {
     floatData[floatOffset] = toHalf(r);
     floatData[floatOffset + 1] = toHalf(g);
     floatData[floatOffset + 2] = toHalf(b);
-    floatData[floatOffset + 3] = 1.0;
+    floatData[floatOffset + 3] = oneAsHalf;
   }
 
   return {
