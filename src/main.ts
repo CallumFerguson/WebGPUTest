@@ -3,7 +3,11 @@ import computeParticleShaderString from "../shaders/computeParticle.wgsl?raw";
 import fullscreenTextureShaderString from "../shaders/fullscreenTexture.wgsl?raw";
 import { mat4, vec3, vec4, quat } from "gl-matrix";
 import { clamp, getDevice } from "./utility";
-import { makeShaderDataDefinitions, makeStructuredView } from "webgpu-utils";
+import {
+  createTextureFromImages,
+  makeShaderDataDefinitions,
+  makeStructuredView,
+} from "webgpu-utils";
 import {
   fixedDeltaTime,
   largestAllowedDeltaTime,
@@ -234,11 +238,26 @@ async function main() {
   );
   renderFunctions.push(gltfRenderer.render!);
 
+  // const yokohamaCubeMapTexture = await createTextureFromImages(
+  //   device,
+  //   [
+  //     "Yokohama/posx.jpg",
+  //     "Yokohama/negx.jpg",
+  //     "Yokohama/posy.jpg",
+  //     "Yokohama/negy.jpg",
+  //     "Yokohama/posz.jpg",
+  //     "Yokohama/negz.jpg",
+  //   ],
+  //   {
+  //     mips: true,
+  //   }
+  // );
+
   const skyboxRenderer = new SkyboxRenderer();
   await skyboxRenderer.init(
     device,
     presentationFormat,
-    cubeMap.cubeMapTexture!,
+    cubeMap.irradianceCubeMapTexture!,
     cameraDataBuffer
   );
   renderFunctions.push(skyboxRenderer.render!);

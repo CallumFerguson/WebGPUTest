@@ -10,7 +10,7 @@ export class CubeMap {
   irradianceCubeMapTexture: GPUTexture | undefined = undefined;
 
   async init(device: GPUDevice, imageURI: string) {
-    const hdr = await parseHDR(imageURI, { flipY: true });
+    const hdr = await parseHDR(imageURI);
 
     const equirectangularTexture = device.createTexture({
       size: { width: hdr.width, height: hdr.height },
@@ -31,9 +31,9 @@ export class CubeMap {
       equirectangularTexture
     );
 
-    // this.irradianceCubeMapTexture = await cubeMapTextureToIrradianceTexture(
-    //   device,
-    //   this.cubeMapTexture
-    // );
+    this.irradianceCubeMapTexture = await cubeMapTextureToIrradianceTexture(
+      device,
+      this.cubeMapTexture
+    );
   }
 }

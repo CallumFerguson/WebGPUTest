@@ -1,42 +1,8 @@
 import { mat4, vec3 } from "gl-matrix";
 import { makeShaderDataDefinitions, makeStructuredView } from "webgpu-utils";
 import cameraDataShaderString from "../../shaders/cameraData.wgsl?raw";
-import { DegToRad } from "../utility";
-
-// const views: mat4[] = [
-//   mat4.fromRotation(mat4.create(), DegToRad * 180, vec3.fromValues(0, 1, 0)),
-//   mat4.create(),
-//   mat4.fromRotation(mat4.create(), DegToRad * -90, vec3.fromValues(1, 0, 0)),
-//   mat4.fromRotation(mat4.create(), DegToRad * 90, vec3.fromValues(1, 0, 0)),
-//   mat4.fromRotation(mat4.create(), DegToRad * 90, vec3.fromValues(0, 1, 0)),
-//   mat4.fromRotation(mat4.create(), DegToRad * 270, vec3.fromValues(0, 1, 0)),
-// ];
 
 const views: mat4[] = [
-  mat4.lookAt(
-    mat4.create(),
-    vec3.fromValues(0, 0, 0),
-    vec3.fromValues(0, 0, -1),
-    vec3.fromValues(0, 1, 0)
-  ),
-  mat4.lookAt(
-    mat4.create(),
-    vec3.fromValues(0, 0, 0),
-    vec3.fromValues(0, 0, 1),
-    vec3.fromValues(0, 1, 0)
-  ),
-  mat4.lookAt(
-    mat4.create(),
-    vec3.fromValues(0, 0, 0),
-    vec3.fromValues(0, 1, 0),
-    vec3.fromValues(1, 0, 0)
-  ),
-  mat4.lookAt(
-    mat4.create(),
-    vec3.fromValues(0, 0, 0),
-    vec3.fromValues(0, -1, 0),
-    vec3.fromValues(-1, 0, 0)
-  ),
   mat4.lookAt(
     mat4.create(),
     vec3.fromValues(0, 0, 0),
@@ -47,6 +13,30 @@ const views: mat4[] = [
     mat4.create(),
     vec3.fromValues(0, 0, 0),
     vec3.fromValues(1, 0, 0),
+    vec3.fromValues(0, 1, 0)
+  ),
+  mat4.lookAt(
+    mat4.create(),
+    vec3.fromValues(0, 0, 0),
+    vec3.fromValues(0, 1, 0),
+    vec3.fromValues(0, 0, -1)
+  ),
+  mat4.lookAt(
+    mat4.create(),
+    vec3.fromValues(0, 0, 0),
+    vec3.fromValues(0, -1, 0),
+    vec3.fromValues(0, 0, 1)
+  ),
+  mat4.lookAt(
+    mat4.create(),
+    vec3.fromValues(0, 0, 0),
+    vec3.fromValues(0, 0, 1),
+    vec3.fromValues(0, 1, 0)
+  ),
+  mat4.lookAt(
+    mat4.create(),
+    vec3.fromValues(0, 0, 0),
+    vec3.fromValues(0, 0, -1),
     vec3.fromValues(0, 1, 0)
   ),
 ];

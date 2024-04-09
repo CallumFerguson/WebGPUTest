@@ -31,6 +31,7 @@ fn vert(i: VertexInput) -> VertexOutput {
 @fragment
 fn frag(i: VertexOutput) -> @location(0) vec4f {
     let t = cameraData.viewDirectionProjectionInverse * i.pos;
-    let colorLinear = textureSample(texture, textureSampler, normalize(t.xyz / t.w) * vec3f(-1, 1, 1)).rgb;
+    let uv = normalize(t.xyz / t.w) * vec3f(-1, 1, 1);
+    let colorLinear = textureSample(texture, textureSampler, uv).rgb;
     return vec4(colorLinear, 1);
 }
