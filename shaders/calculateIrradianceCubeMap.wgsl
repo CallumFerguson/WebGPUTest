@@ -1,3 +1,5 @@
+const PI = 3.14159265359;
+
 @group(0) @binding(0) var texture: texture_cube<f32>;
 @group(0) @binding(1) var textureSampler: sampler;
 
@@ -30,8 +32,35 @@ fn vert(i: VertexInput) -> VertexOutput {
 
 @fragment
 fn frag(i: VertexOutput) -> @location(0) vec4f {
+    const gamma: f32 = 2.2;
+    const exposure: f32 = 1;
+
     let t = cameraData.viewDirectionProjectionInverse * i.pos;
     let direction = normalize(t.xyz / t.w) * vec3f(-1, 1, 1);
-    let colorLinear = textureSample(texture, textureSampler, direction).rgb;
-    return vec4(colorLinear, 1);
+
+    var irradiance = vec3f(0, 0, 0);
+
+    var up = vec3(0.0, 1.0, 0.0);
+    let right = normalize(cross(up, direction));
+    up = normalize(cross(direction, right));
+
+    const sampleDelta = 0.025;
+    var nrSamples = 0;
+    for(var phi = 0.0; phi < 2.0 * PI; phi += sampleDelta)
+    {
+        for(var theta = 0.0; theta < 0.5 * PI; theta += sampleDelta)
+        {
+            // spherical to cartesian (in tangent space)
+            let tangentSample = vec3(sin(theta) * cos(phi), sin(theta) * sin(phi), cos(theta));
+            // tangent space to world
+            let sampleVec = tangentSample.x * right + tangentSample.y * up + tangentSample.z * direction;
+
+            let linearColorSample = textureSample(texture, textureSampler, sampleVec).rgb * cos(theta) * sin(theta);
+            irradiance += min(linearColorSample, vec3(25, 25, 25));
+            nrSamples++;
+        }
+    }
+    irradiance = PI * irradiance * (1.0 / f32(nrSamples));
+
+    return vec4(irradiance, 1);
 }

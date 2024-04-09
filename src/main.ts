@@ -219,7 +219,9 @@ async function main() {
   // renderFunctions.push(cubeMapReflectionRenderer.render!);
 
   const cubeMap = new CubeMap();
-  await cubeMap.init(device, "symmetrical_garden_02_4k.hdr");
+  // await cubeMap.init(device, "symmetrical_garden_02_4k.hdr");
+  // await cubeMap.init(device, "newport_loft.hdr");
+  await cubeMap.init(device, "buikslotermeerplein_1k.hdr");
 
   // const fullscreenTextureRenderer = new FullscreenTextureRenderer(
   //   device,
