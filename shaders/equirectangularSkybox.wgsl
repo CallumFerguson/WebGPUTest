@@ -42,7 +42,7 @@ fn frag(i: VertexOutput) -> @location(0) vec4f {
 //    const exposure: f32 = 1;
 
     let t = cameraData.viewDirectionProjectionInverse * i.pos;
-    let direction = normalize(t.xyz / t.w);
+    let direction = normalize(t.xyz / t.w) * vec3f(1, -1, 1);
     let rotatedDirection = vec3(-direction.z, direction.y, direction.x);
     let uv = sampleSphericalMap(rotatedDirection);
     var colorLinear = textureSample(texture, textureSampler, uv).rgb;

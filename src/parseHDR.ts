@@ -105,37 +105,39 @@ export async function parseHDR(url: string) {
 
   const channels = 4;
   let floatData = new Uint16Array(width * height * channels);
-  for (let row = 0; row < height; row++) {
-    for (let col = 0; col < width; col++) {
-      const offset = (row * width + col) * channels;
-      let r = data[offset] / 255;
-      let g = data[offset + 1] / 255;
-      let b = data[offset + 2] / 255;
-      const e = data[offset + 3];
-      const scale = Math.pow(2.0, e - 128.0);
+  // for (let row = 0; row < height; row++) {
+  //   for (let col = 0; col < width; col++) {
+  for (let offset = 0; offset < data.length; offset += 4) {
+    // const offset = (row * width + col) * channels;
+    let r = data[offset] / 255;
+    let g = data[offset + 1] / 255;
+    let b = data[offset + 2] / 255;
+    const e = data[offset + 3];
+    const scale = Math.pow(2.0, e - 128.0);
 
-      r *= scale;
-      g *= scale;
-      b *= scale;
+    r *= scale;
+    g *= scale;
+    b *= scale;
 
-      // flip Y
-      const flippedRow = height - row - 1;
-      const floatOffset = (flippedRow * width + col) * channels;
+    // flip Y
+    // const flippedRow = height - row - 1;
+    // const floatOffset = (flippedRow * width + col) * channels;
 
-      // flip both
-      // const flippedRow = height - row - 1;
-      // const flippedCol = width - col - 1;
-      // const floatOffset = (flippedRow * width + flippedCol) * channels;
+    // flip both
+    // const flippedRow = height - row - 1;
+    // const flippedCol = width - col - 1;
+    // const floatOffset = (flippedRow * width + flippedCol) * channels;
 
-      // don't flip
-      // const floatOffset = offset;
+    // don't flip
+    const floatOffset = offset;
 
-      floatData[floatOffset] = toHalf(r);
-      floatData[floatOffset + 1] = toHalf(g);
-      floatData[floatOffset + 2] = toHalf(b);
-      floatData[floatOffset + 3] = oneAsHalf;
-    }
+    floatData[floatOffset] = toHalf(r);
+    floatData[floatOffset + 1] = toHalf(g);
+    floatData[floatOffset + 2] = toHalf(b);
+    floatData[floatOffset + 3] = oneAsHalf;
   }
+  //   }
+  // }
 
   return {
     width,
