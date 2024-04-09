@@ -7,6 +7,7 @@ import {
 } from "./cubeMapCameras";
 
 const cubeMapFacePixelLength = 2048;
+const irradianceCubeMapFacePixelLength = 2048;
 
 export async function equirectangularTextureToCubeMap(
   device: GPUDevice,
@@ -184,7 +185,11 @@ export async function cubeMapTextureToIrradianceTexture(
   });
 
   const irradianceCubeMapTexture = device.createTexture({
-    size: [cubeMapFacePixelLength, cubeMapFacePixelLength, 6],
+    size: [
+      irradianceCubeMapFacePixelLength,
+      irradianceCubeMapFacePixelLength,
+      6,
+    ],
     format: textureFormat,
     usage: GPUTextureUsage.RENDER_ATTACHMENT | GPUTextureUsage.TEXTURE_BINDING,
   });
