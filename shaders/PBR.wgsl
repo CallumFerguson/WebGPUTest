@@ -15,6 +15,7 @@ struct ObjectData {
 @group(1) @binding(3) var normalTexture: texture_2d<f32>;
 @group(1) @binding(4) var occlusionRoughnessMetalicTexture: texture_2d<f32>;
 @group(1) @binding(5) var environmentCubeMapTexture: texture_cube<f32>;
+@group(1) @binding(6) var environmentIrradianceCubeMapTexture: texture_cube<f32>;
 
 //@group(2) @binding(0) var<uniform> objectData: ObjectData;
 @group(2) @binding(0) var<storage, read> objectData: array<ObjectData>;
@@ -64,9 +65,11 @@ fn frag(i: VertexOutput) -> @location(0) vec4f {
 
 //    let albedo = pow(textureSample(albedoTexture, textureSampler, i.uv).rgb, vec3(gamma));
     let albedo: vec3f = vec3(0.5, 0, 0);
+//    let albedo: vec3f = vec3(1, 1, 1);
 
 //    let emission = pow(textureSample(emissionTexture, textureSampler, i.uv).rgb, vec3(gamma));
     let emission: vec3f = vec3(0, 0, 0);
+
 //    let occlusionRoughnessMetalic = textureSample(occlusionRoughnessMetalicTexture, textureSampler, i.uv).rgb;
     let occlusionRoughnessMetalic: vec3f = vec3(1, i.roughness, i.metallic);
 
@@ -149,7 +152,14 @@ fn frag(i: VertexOutput) -> @location(0) vec4f {
         Lo += (kD * albedo / PI + specular) * radiance * NdotL;
     }
 
-    let ambient = vec3(0.03) * albedo * ao;
+//    let ambient = vec3(0.03) * albedo * ao;
+
+    let kS = fresnelSchlickRoughness(max(dot(N, V), 0.0), F0, roughness);
+    let kD = 1.0 - kS;
+    let irradiance = textureSample(environmentIrradianceCubeMapTexture, textureSampler, worldNormal * vec3f(-1, 1, 1)).rgb;
+    let diffuse = irradiance * albedo;
+    let ambient = (kD * diffuse) * ao;
+
     var colorLinear = ambient + Lo + emission;
     colorLinear = vec3(1.0) - exp(-colorLinear * exposure);
 
@@ -165,6 +175,10 @@ fn pow5(value: f32) -> f32 {
 
 fn fresnelSchlick(cosTheta: f32, F0: vec3f) -> vec3f {
     return F0 + (1.0 - F0) * pow5(clamp(1.0 - cosTheta, 0.0, 1.0));
+}
+
+fn fresnelSchlickRoughness(cosTheta: f32, F0: vec3f, roughness: f32) -> vec3f {
+    return F0 + (max(vec3(1.0 - roughness), F0) - F0) * pow(clamp(1.0 - cosTheta, 0.0, 1.0), 5.0);
 }
 
 fn distributionGGX(N: vec3f, H: vec3f, roughness: f32) -> f32 {

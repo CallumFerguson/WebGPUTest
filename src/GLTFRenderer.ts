@@ -2,7 +2,6 @@ import pbrShaderString from "../shaders/PBR.wgsl?raw";
 import cameraDataShaderString from "../shaders/cameraData.wgsl?raw";
 import {
   createTextureFromImage,
-  createTextureFromImages,
   makeShaderDataDefinitions,
   makeStructuredView,
 } from "webgpu-utils";
@@ -14,7 +13,8 @@ import {
   loadModel,
 } from "./utility";
 import { multisampleCount } from "./constants";
-import { mat4, vec3 } from "gl-matrix";
+import { mat4, quat, vec3 } from "gl-matrix";
+import { CubeMap } from "./CubeMap/CubeMap";
 
 const shaderString: string = cameraDataShaderString + pbrShaderString;
 
@@ -26,23 +26,9 @@ export class GLTFRenderer {
     modelName: string,
     device: GPUDevice,
     presentationFormat: GPUTextureFormat,
-    cameraDataBuffer: GPUBuffer
+    cameraDataBuffer: GPUBuffer,
+    environmentCubeMap: CubeMap
   ) {
-    const environmentCubeMapTexture = await createTextureFromImages(
-      device,
-      [
-        "Yokohama/posx.jpg",
-        "Yokohama/negx.jpg",
-        "Yokohama/posy.jpg",
-        "Yokohama/negy.jpg",
-        "Yokohama/posz.jpg",
-        "Yokohama/negz.jpg",
-      ],
-      {
-        mips: true,
-      }
-    );
-
     const nrRows = 7;
     const nrColumns = 7;
     const spacing = 2.5;
@@ -60,15 +46,19 @@ export class GLTFRenderer {
         // on direct lighting.
         const roughness = clamp(col / nrColumns, 0.05, 1);
 
+        const scale = 1;
         const model = mat4.create();
-        mat4.fromTranslation(
+        mat4.fromRotationTranslationScale(
           model,
+          quat.create(),
           vec3.fromValues(
             (col - nrColumns / 2) * spacing + spacing / 2,
             (row - nrRows / 2) * spacing + spacing / 2,
             0
-          )
+          ),
+          vec3.fromValues(scale, scale, scale)
         );
+
         const normalMatrix = mat4.create();
         mat4.invert(normalMatrix, model);
         mat4.transpose(normalMatrix, normalMatrix);
@@ -119,7 +109,10 @@ export class GLTFRenderer {
       }
     }
 
-    textureURIs = ["normal.png", "normal.png", "normal.png", "normal.png"];
+    // TODO: default textures for when they are missing (white albedo, flat normals, white AO, etc.)
+    if (textureURIs.length !== 4) {
+      textureURIs = ["normal.png", "normal.png", "normal.png", "normal.png"];
+    }
 
     let textures = await Promise.all(
       textureURIs.map((textureURI) => {
@@ -185,6 +178,11 @@ export class GLTFRenderer {
         },
         {
           binding: 5,
+          visibility: GPUShaderStage.FRAGMENT,
+          texture: { viewDimension: "cube" },
+        },
+        {
+          binding: 6,
           visibility: GPUShaderStage.FRAGMENT,
           texture: { viewDimension: "cube" },
         },
@@ -282,7 +280,15 @@ export class GLTFRenderer {
         { binding: 4, resource: textures[1].createView() },
         {
           binding: 5,
-          resource: environmentCubeMapTexture.createView({ dimension: "cube" }),
+          resource: environmentCubeMap.cubeMapTexture!.createView({
+            dimension: "cube",
+          }),
+        },
+        {
+          binding: 6,
+          resource: environmentCubeMap.irradianceCubeMapTexture!.createView({
+            dimension: "cube",
+          }),
         },
       ],
     });

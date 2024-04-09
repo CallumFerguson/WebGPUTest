@@ -218,10 +218,14 @@ async function main() {
   // );
   // renderFunctions.push(cubeMapReflectionRenderer.render!);
 
-  const cubeMap = new CubeMap();
-  // await cubeMap.init(device, "symmetrical_garden_02_4k.hdr");
-  // await cubeMap.init(device, "newport_loft.hdr");
-  await cubeMap.init(device, "buikslotermeerplein_1k.hdr");
+  const environmentCubeMap = new CubeMap();
+  // await environmentCubeMap.init(device, "symmetrical_garden_02_4k.hdr");
+  await environmentCubeMap.init(device, "newport_loft.hdr");
+  // await environmentCubeMap.init(device, "buikslotermeerplein_1k.hdr");
+  // await environmentCubeMap.init(device, "thatch_chapel_2k.hdr");
+  // await environmentCubeMap.init(device, ".hdr");
+  // await environmentCubeMap.init(device, ".hdr");
+  // await environmentCubeMap.init(device, ".hdr");
 
   // const fullscreenTextureRenderer = new FullscreenTextureRenderer(
   //   device,
@@ -236,30 +240,16 @@ async function main() {
     "tangents.glb",
     device,
     presentationFormat,
-    cameraDataBuffer
+    cameraDataBuffer,
+    environmentCubeMap
   );
   renderFunctions.push(gltfRenderer.render!);
-
-  // const yokohamaCubeMapTexture = await createTextureFromImages(
-  //   device,
-  //   [
-  //     "Yokohama/posx.jpg",
-  //     "Yokohama/negx.jpg",
-  //     "Yokohama/posy.jpg",
-  //     "Yokohama/negy.jpg",
-  //     "Yokohama/posz.jpg",
-  //     "Yokohama/negz.jpg",
-  //   ],
-  //   {
-  //     mips: true,
-  //   }
-  // );
 
   const skyboxRenderer = new SkyboxRenderer();
   await skyboxRenderer.init(
     device,
     presentationFormat,
-    cubeMap.irradianceCubeMapTexture!,
+    environmentCubeMap.cubeMapTexture!,
     cameraDataBuffer
   );
   renderFunctions.push(skyboxRenderer.render!);
