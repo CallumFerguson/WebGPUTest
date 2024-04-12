@@ -11,6 +11,7 @@ import { generateMipmap, numMipLevels } from "webgpu-utils";
 const cubeMapFacePixelLength = 2048;
 const irradianceCubeMapFacePixelLength = 32;
 const prefilterCubeMapFacePixelLength = 512;
+const roughnessMipLevels = 5;
 
 export async function equirectangularTextureToCubeMap(
   device: GPUDevice,
@@ -325,15 +326,9 @@ export async function cubeMapTextureToPrefilterTexture(
     mipmapFilter: "linear",
   });
 
-  const size = [
-    prefilterCubeMapFacePixelLength,
-    prefilterCubeMapFacePixelLength,
-    6,
-  ];
-  const mipLevelCount = numMipLevels(size);
   const prefilterCubeMapTexture = device.createTexture({
-    size,
-    mipLevelCount,
+    size: [prefilterCubeMapFacePixelLength, prefilterCubeMapFacePixelLength, 6],
+    mipLevelCount: roughnessMipLevels,
     format: textureFormat,
     usage: GPUTextureUsage.RENDER_ATTACHMENT | GPUTextureUsage.TEXTURE_BINDING,
   });
@@ -352,8 +347,8 @@ export async function cubeMapTextureToPrefilterTexture(
   });
   const cubeMapCameraDataBindGroups = getCubeMapCameraDataBindGroups(device);
 
-  for (let mipLevel = 0; mipLevel < mipLevelCount; mipLevel++) {
-    const roughness = mipLevel / (mipLevelCount - 1);
+  for (let mipLevel = 0; mipLevel < roughnessMipLevels; mipLevel++) {
+    const roughness = mipLevel / (roughnessMipLevels - 1);
 
     const roughnessBuffer = device.createBuffer({
       size: 4,

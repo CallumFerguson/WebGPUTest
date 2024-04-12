@@ -16,6 +16,7 @@ struct ObjectData {
 @group(1) @binding(4) var occlusionRoughnessMetalicTexture: texture_2d<f32>;
 @group(1) @binding(5) var environmentIrradianceCubeMapTexture: texture_cube<f32>;
 @group(1) @binding(6) var environmentPrefilterCubeMapTexture: texture_cube<f32>;
+@group(1) @binding(7) var brdfLUT: texture_2d<f32>;
 
 @group(2) @binding(0) var<storage, read> objectData: array<ObjectData>;
 
@@ -77,27 +78,6 @@ fn frag(i: VertexOutput) -> @location(0) vec4f {
     let tangentSpaceNormal: vec3f = vec3(0, 0, 1);
     let worldNormal = normalize(TBN * tangentSpaceNormal);
 
-//    let eyeToSurfaceDir = normalize(i.worldPosition - cameraData.position);
-//    var reflectionDirection = reflect(eyeToSurfaceDir, worldNormal);
-//
-//    let reflectionColor = textureSampleLevel(environmentPrefilterCubeMapTexture, textureSampler, reflectionDirection * vec3(-1, 1, 1), 0).rgb;
-//
-//    var light = dot(worldNormal, normalize(-vec3(-1, -1, 0)));
-//    light = clamp(light, 0.05, 1);
-//    light = min(light, occlusionRoughnessMetalic.r);
-//    var fragColor = albedo * reflectionColor * light;
-//    fragColor += emission;
-//
-////    return vec4(pow(fragColor.rgb, vec3(1.0/gamma)), 1);
-//
-////    let viewNormal = cameraData.view * vec4(worldNormal, 0);
-//
-//    let r = vec3(1.0, 0.71, 0.29);
-//    var a = 1 - dot(worldNormal, -eyeToSurfaceDir);
-//    a = pow(a, 5);
-//    let b = r + (1 - r) * a;
-//    return vec4(vec3(b), 1);
-
     const lightPositions = array<vec3f, 4>(
         vec3f(-10, 10, 10),
         vec3f(10, 10, 10),
@@ -151,13 +131,23 @@ fn frag(i: VertexOutput) -> @location(0) vec4f {
         Lo += (kD * albedo / PI + specular) * radiance * NdotL;
     }
 
-//    let ambient = vec3(0.03) * albedo * ao;
+    let F = fresnelSchlickRoughness(max(dot(N, V), 0.0), F0, roughness);
 
-    let kS = fresnelSchlickRoughness(max(dot(N, V), 0.0), F0, roughness);
-    let kD = 1.0 - kS;
+    let kS = F;
+    var kD = 1.0 - kS;
+    kD *= 1.0 - metallic;
+
     let irradiance = textureSample(environmentIrradianceCubeMapTexture, textureSampler, worldNormal * vec3f(-1, 1, 1)).rgb;
     let diffuse = irradiance * albedo;
-    let ambient = (kD * diffuse) * ao;
+
+    let R = reflect(-V, N);
+
+    const MAX_REFLECTION_LOD = 4.0;
+    let prefilteredColor = textureSampleLevel(environmentPrefilterCubeMapTexture, textureSampler, R * vec3f(-1, 1, 1), roughness * MAX_REFLECTION_LOD).rgb;
+    let envBRDF = textureSample(brdfLUT, textureSampler, vec2(max(dot(N, V), 0.0), roughness)).rg;
+    let specular = prefilteredColor * (F * envBRDF.x + envBRDF.y);
+
+    let ambient = (kD * diffuse + specular) * ao;
 
     var colorLinear = ambient + Lo + emission;
     colorLinear = vec3(1.0) - exp(-colorLinear * exposure);

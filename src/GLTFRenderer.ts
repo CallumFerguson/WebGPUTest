@@ -186,6 +186,11 @@ export class GLTFRenderer {
           visibility: GPUShaderStage.FRAGMENT,
           texture: { viewDimension: "cube" },
         },
+        {
+          binding: 7,
+          visibility: GPUShaderStage.FRAGMENT,
+          texture: {},
+        },
       ],
     });
 
@@ -270,6 +275,10 @@ export class GLTFRenderer {
       entries: [{ binding: 0, resource: { buffer: cameraDataBuffer } }],
     });
 
+    let brdfLUT = await createTextureFromImage(device, "ibl_brdf_lut.png", {
+      flipY: true,
+    });
+
     let bindGroup1 = device.createBindGroup({
       layout: bindGroupLayoutGroup1,
       entries: [
@@ -290,6 +299,7 @@ export class GLTFRenderer {
             dimension: "cube",
           }),
         },
+        { binding: 7, resource: brdfLUT.createView() },
       ],
     });
 

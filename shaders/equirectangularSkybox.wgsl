@@ -43,7 +43,7 @@ fn frag(i: VertexOutput) -> @location(0) vec4f {
 
     let t = cameraData.viewDirectionProjectionInverse * i.pos;
     var direction = normalize(t.xyz / t.w) * vec3f(1, -1, 1);
-    direction = vec3(-direction.z, direction.y, direction.x);
+//    direction = vec3(-direction.z, direction.y, direction.x);
     let uv = sampleSphericalMap(direction);
     var colorLinear = textureSample(texture, textureSampler, uv).rgb;
 
