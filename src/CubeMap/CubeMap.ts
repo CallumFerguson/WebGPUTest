@@ -1,6 +1,7 @@
 import { parseHDR } from "../parseHDR";
 import {
   cubeMapTextureToIrradianceTexture,
+  cubeMapTextureToPrefilterTexture,
   equirectangularTextureToCubeMap,
 } from "./cubeMapUtility";
 
@@ -8,6 +9,7 @@ export class CubeMap {
   equirectangularTexture: GPUTexture | undefined = undefined;
   cubeMapTexture: GPUTexture | undefined = undefined;
   irradianceCubeMapTexture: GPUTexture | undefined = undefined;
+  prefilterCubeMapTexture: GPUTexture | undefined = undefined;
 
   async init(device: GPUDevice, imageURI: string) {
     const hdr = await parseHDR(imageURI);
@@ -32,6 +34,11 @@ export class CubeMap {
     );
 
     this.irradianceCubeMapTexture = await cubeMapTextureToIrradianceTexture(
+      device,
+      this.cubeMapTexture
+    );
+
+    this.prefilterCubeMapTexture = await cubeMapTextureToPrefilterTexture(
       device,
       this.cubeMapTexture
     );

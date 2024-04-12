@@ -30,7 +30,7 @@ fn vert(i: VertexInput) -> VertexOutput {
 @fragment
 fn frag(i: VertexOutput) -> @location(0) vec4f {
     let t = cameraData.viewDirectionProjectionInverse * i.pos;
-    var color = textureSample(texture, textureSampler, normalize(t.xyz / t.w) * vec3f(-1, 1, 1)).rgb;
+    var color = textureSampleLevel(texture, textureSampler, normalize(t.xyz / t.w) * vec3f(-1, 1, 1), 0).rgb;
 
     const gamma: f32 = 2.2;
     const exposure: f32 = 1;
