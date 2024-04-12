@@ -6,10 +6,11 @@ import {
   getCubeMapCameraDataBindGroupLayout,
   getCubeMapCameraDataBindGroups,
 } from "./cubeMapCameras";
-import { numMipLevels } from "webgpu-utils";
+import { generateMipmap, numMipLevels } from "webgpu-utils";
 
 const cubeMapFacePixelLength = 2048;
 const irradianceCubeMapFacePixelLength = 32;
+const prefilterCubeMapFacePixelLength = 512;
 
 export async function equirectangularTextureToCubeMap(
   device: GPUDevice,
@@ -74,8 +75,11 @@ export async function equirectangularTextureToCubeMap(
     minFilter: "linear",
   });
 
+  const size = [cubeMapFacePixelLength, cubeMapFacePixelLength, 6];
+  const mipLevelCount = numMipLevels(size);
   const cubeMapTexture = device.createTexture({
-    size: [cubeMapFacePixelLength, cubeMapFacePixelLength, 6],
+    size,
+    mipLevelCount,
     format: textureFormat,
     usage: GPUTextureUsage.RENDER_ATTACHMENT | GPUTextureUsage.TEXTURE_BINDING,
   });
@@ -99,6 +103,8 @@ export async function equirectangularTextureToCubeMap(
             dimension: "2d",
             baseArrayLayer: i,
             arrayLayerCount: 1,
+            baseMipLevel: 0,
+            mipLevelCount: 1,
           }),
           clearValue: { r: 0.0, g: 0.0, b: 0.0, a: 1.0 },
           loadOp: "clear",
@@ -119,6 +125,8 @@ export async function equirectangularTextureToCubeMap(
   }
 
   device.queue.submit([commandEncoder.finish()]);
+
+  generateMipmap(device, cubeMapTexture);
 
   return cubeMapTexture;
 }
@@ -303,9 +311,14 @@ export async function cubeMapTextureToPrefilterTexture(
   const sampler = device.createSampler({
     magFilter: "linear",
     minFilter: "linear",
+    mipmapFilter: "linear",
   });
 
-  const size = [cubeMapFacePixelLength, cubeMapFacePixelLength, 6];
+  const size = [
+    prefilterCubeMapFacePixelLength,
+    prefilterCubeMapFacePixelLength,
+    6,
+  ];
   const mipLevelCount = numMipLevels(size);
   const prefilterCubeMapTexture = device.createTexture({
     size,

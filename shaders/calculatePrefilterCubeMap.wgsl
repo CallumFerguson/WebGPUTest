@@ -42,7 +42,7 @@ fn frag(i: VertexOutput) -> @location(0) vec4f {
     let R = N;
     let V = R;
 
-    const roughness = 1;
+    const roughness = 0.5;
 
     const SAMPLE_COUNT: u32 = 1024;
     var totalWeight = 0.0;
@@ -54,7 +54,20 @@ fn frag(i: VertexOutput) -> @location(0) vec4f {
         let L = normalize(2.0 * dot(V, H) * H - V);
 
         let NdotL = max(dot(N, L), 0.0);
-        let sampleColor = textureSample(texture, textureSampler, L).rgb;
+
+        // sample from the environment's mip level based on roughness/pdf
+        let D = distributionGGX(N, H, roughness);
+        let NdotH = max(dot(N, H), 0.0);
+        let HdotV = max(dot(H, V), 0.0);
+        let pdf = D * NdotH / (4.0 * HdotV) + 0.0001;
+
+        let resolution = 512.0; // resolution of source cubemap (per face)
+        let saTexel  = 4.0 * PI / (6.0 * resolution * resolution);
+        let saSample = 1.0 / (f32(SAMPLE_COUNT) * pdf + 0.0001);
+
+        let mipLevel = select(0.5 * log2(saSample / saTexel), 0.0, roughness == 0.0);
+        let sampleColor = textureSampleLevel(texture, textureSampler, L, mipLevel).rgb;
+
         if(NdotL > 0.0)
         {
             prefilteredColor += sampleColor * NdotL;
@@ -100,4 +113,17 @@ fn importanceSampleGGX(Xi: vec2f, N: vec3f, roughness: f32) -> vec3f{
 
     let sampleVec = tangent * H.x + bitangent * H.y + N * H.z;
     return normalize(sampleVec);
+}
+
+fn distributionGGX(N: vec3f, H: vec3f, roughness: f32) -> f32 {
+    let a = roughness * roughness;
+    let a2 = a * a;
+    let NdotH = max(dot(N, H), 0.0);
+    let NdotH2 = NdotH * NdotH;
+
+    let num = a2;
+    var denom = (NdotH2 * (a2 - 1.0) + 1.0);
+    denom = PI * denom * denom;
+
+    return num / denom;
 }
