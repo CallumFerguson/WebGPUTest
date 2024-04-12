@@ -280,13 +280,13 @@ export class GLTFRenderer {
         { binding: 4, resource: textures[1].createView() },
         {
           binding: 5,
-          resource: environmentCubeMap.cubeMapTexture!.createView({
+          resource: environmentCubeMap.irradianceCubeMapTexture!.createView({
             dimension: "cube",
           }),
         },
         {
           binding: 6,
-          resource: environmentCubeMap.irradianceCubeMapTexture!.createView({
+          resource: environmentCubeMap.prefilterCubeMapTexture!.createView({
             dimension: "cube",
           }),
         },

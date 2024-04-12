@@ -5,6 +5,8 @@ const PI = 3.14159265359;
 
 @group(1) @binding(0) var<uniform> cameraData: CameraData;
 
+@group(2) @binding(0) var<uniform> roughness: f32;
+
 struct VertexInput {
     @builtin(vertex_index) vertexIndex: u32,
 }
@@ -41,8 +43,6 @@ fn frag(i: VertexOutput) -> @location(0) vec4f {
     let N = direction;
     let R = N;
     let V = R;
-
-    const roughness = 0.5;
 
     const SAMPLE_COUNT: u32 = 1024;
     var totalWeight = 0.0;

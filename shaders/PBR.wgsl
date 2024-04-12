@@ -14,10 +14,9 @@ struct ObjectData {
 @group(1) @binding(2) var emissionTexture: texture_2d<f32>;
 @group(1) @binding(3) var normalTexture: texture_2d<f32>;
 @group(1) @binding(4) var occlusionRoughnessMetalicTexture: texture_2d<f32>;
-@group(1) @binding(5) var environmentCubeMapTexture: texture_cube<f32>;
-@group(1) @binding(6) var environmentIrradianceCubeMapTexture: texture_cube<f32>;
+@group(1) @binding(5) var environmentIrradianceCubeMapTexture: texture_cube<f32>;
+@group(1) @binding(6) var environmentPrefilterCubeMapTexture: texture_cube<f32>;
 
-//@group(2) @binding(0) var<uniform> objectData: ObjectData;
 @group(2) @binding(0) var<storage, read> objectData: array<ObjectData>;
 
 struct VertexInput {
@@ -81,7 +80,7 @@ fn frag(i: VertexOutput) -> @location(0) vec4f {
 //    let eyeToSurfaceDir = normalize(i.worldPosition - cameraData.position);
 //    var reflectionDirection = reflect(eyeToSurfaceDir, worldNormal);
 //
-//    let reflectionColor = textureSample(environmentCubeMapTexture, textureSampler, reflectionDirection * vec3(-1, 1, 1)).rgb;
+//    let reflectionColor = textureSampleLevel(environmentPrefilterCubeMapTexture, textureSampler, reflectionDirection * vec3(-1, 1, 1), 0).rgb;
 //
 //    var light = dot(worldNormal, normalize(-vec3(-1, -1, 0)));
 //    light = clamp(light, 0.05, 1);

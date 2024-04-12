@@ -273,10 +273,21 @@ export async function cubeMapTextureToPrefilterTexture(
     ],
   });
 
+  const bindGroupLayoutGroup2 = device.createBindGroupLayout({
+    entries: [
+      {
+        binding: 0,
+        visibility: GPUShaderStage.FRAGMENT,
+        buffer: {},
+      },
+    ],
+  });
+
   const pipelineLayout = device.createPipelineLayout({
     bindGroupLayouts: [
       bindGroupLayoutGroup0,
       getCubeMapCameraDataBindGroupLayout(device),
+      bindGroupLayoutGroup2,
     ],
   });
 
@@ -341,33 +352,54 @@ export async function cubeMapTextureToPrefilterTexture(
   });
   const cubeMapCameraDataBindGroups = getCubeMapCameraDataBindGroups(device);
 
-  for (let i = 0; i < cubeMapCameraDataBindGroups.length; i++) {
-    const renderPassDescriptor: GPURenderPassDescriptor = {
-      colorAttachments: [
+  for (let mipLevel = 0; mipLevel < mipLevelCount; mipLevel++) {
+    const roughness = mipLevel / (mipLevelCount - 1);
+
+    const roughnessBuffer = device.createBuffer({
+      size: 4,
+      usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
+    });
+    device.queue.writeBuffer(roughnessBuffer, 0, new Float32Array([roughness]));
+
+    let bindGroup2 = device.createBindGroup({
+      layout: bindGroupLayoutGroup2,
+      entries: [
         {
-          view: prefilterCubeMapTexture.createView({
-            dimension: "2d",
-            baseArrayLayer: i,
-            arrayLayerCount: 1,
-            baseMipLevel: 0,
-            mipLevelCount: 1,
-          }),
-          clearValue: { r: 0.0, g: 0.0, b: 0.0, a: 1.0 },
-          loadOp: "clear",
-          storeOp: "store",
+          binding: 0,
+          resource: { buffer: roughnessBuffer },
         },
       ],
-    };
+    });
 
-    const renderPassEncoder =
-      commandEncoder.beginRenderPass(renderPassDescriptor);
+    for (let side = 0; side < cubeMapCameraDataBindGroups.length; side++) {
+      const renderPassDescriptor: GPURenderPassDescriptor = {
+        colorAttachments: [
+          {
+            view: prefilterCubeMapTexture.createView({
+              dimension: "2d",
+              baseArrayLayer: side,
+              arrayLayerCount: 1,
+              baseMipLevel: mipLevel,
+              mipLevelCount: 1,
+            }),
+            clearValue: { r: 0.0, g: 0.0, b: 0.0, a: 1.0 },
+            loadOp: "clear",
+            storeOp: "store",
+          },
+        ],
+      };
 
-    renderPassEncoder.setPipeline(pipeline);
-    renderPassEncoder.setBindGroup(0, bindGroup0);
-    renderPassEncoder.setBindGroup(1, cubeMapCameraDataBindGroups[i]);
-    renderPassEncoder.draw(3);
+      const renderPassEncoder =
+        commandEncoder.beginRenderPass(renderPassDescriptor);
 
-    renderPassEncoder.end();
+      renderPassEncoder.setPipeline(pipeline);
+      renderPassEncoder.setBindGroup(0, bindGroup0);
+      renderPassEncoder.setBindGroup(1, cubeMapCameraDataBindGroups[side]);
+      renderPassEncoder.setBindGroup(2, bindGroup2);
+      renderPassEncoder.draw(3);
+
+      renderPassEncoder.end();
+    }
   }
 
   device.queue.submit([commandEncoder.finish()]);

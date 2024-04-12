@@ -249,7 +249,7 @@ async function main() {
   await skyboxRenderer.init(
     device,
     presentationFormat,
-    environmentCubeMap.prefilterCubeMapTexture!,
+    environmentCubeMap.cubeMapTexture!,
     cameraDataBuffer
   );
   renderFunctions.push(skyboxRenderer.render!);

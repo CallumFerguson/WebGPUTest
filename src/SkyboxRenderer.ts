@@ -74,6 +74,7 @@ export class SkyboxRenderer {
     const sampler = device.createSampler({
       magFilter: "linear",
       minFilter: "linear",
+      mipmapFilter: "linear",
     });
 
     let bindGroup0 = device.createBindGroup({
