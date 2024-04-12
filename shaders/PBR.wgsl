@@ -63,19 +63,19 @@ fn frag(i: VertexOutput) -> @location(0) vec4f {
     const gamma: f32 = 2.2;
     const exposure: f32 = 1;
 
-//    let albedo = pow(textureSample(albedoTexture, textureSampler, i.uv).rgb, vec3(gamma));
-    let albedo: vec3f = vec3(0.5, 0, 0);
+    let albedo = pow(textureSample(albedoTexture, textureSampler, i.uv).rgb, vec3(gamma));
+//    let albedo: vec3f = vec3(0.5, 0, 0);
 //    let albedo: vec3f = vec3(1, 1, 1);
 
-//    let emission = pow(textureSample(emissionTexture, textureSampler, i.uv).rgb, vec3(gamma));
-    let emission: vec3f = vec3(0, 0, 0);
+    let emission = pow(textureSample(emissionTexture, textureSampler, i.uv).rgb, vec3(gamma));
+//    let emission: vec3f = vec3(0, 0, 0);
 
-//    let occlusionRoughnessMetalic = textureSample(occlusionRoughnessMetalicTexture, textureSampler, i.uv).rgb;
-    let occlusionRoughnessMetalic: vec3f = vec3(1, i.roughness, i.metallic);
+    let occlusionRoughnessMetalic = textureSample(occlusionRoughnessMetalicTexture, textureSampler, i.uv).rgb;
+//    let occlusionRoughnessMetalic: vec3f = vec3(1, i.roughness, i.metallic);
 
     let TBN = mat3x3(i.tangnet, i.bitangent, i.normal);
-//    let tangentSpaceNormal = textureSample(normalTexture, textureSampler, i.uv).rgb * 2 - 1;
-    let tangentSpaceNormal: vec3f = vec3(0, 0, 1);
+    let tangentSpaceNormal = textureSample(normalTexture, textureSampler, i.uv).rgb * 2 - 1;
+//    let tangentSpaceNormal: vec3f = vec3(0, 0, 1);
     let worldNormal = normalize(TBN * tangentSpaceNormal);
 
     const lightPositions = array<vec3f, 4>(
@@ -104,7 +104,7 @@ fn frag(i: VertexOutput) -> @location(0) vec4f {
 
     // reflectance equation
     var Lo = vec3(0.0);
-    for (var n = 0; n < 4; n++)
+    for (var n = 0; n < 0; n++)
     {
         // calculate per-light radiance
         let L = normalize(lightPositions[n] - i.worldPosition);

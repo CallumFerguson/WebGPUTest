@@ -10,6 +10,7 @@ import {
   calculateTangents,
   clamp,
   createBuffer,
+  DegToRad,
   loadModel,
 } from "./utility";
 import { multisampleCount } from "./constants";
@@ -29,8 +30,8 @@ export class GLTFRenderer {
     cameraDataBuffer: GPUBuffer,
     environmentCubeMap: CubeMap
   ) {
-    const nrRows = 7;
-    const nrColumns = 7;
+    const nrRows = 1;
+    const nrColumns = 1;
     const spacing = 2.5;
 
     const objectDataArray: {
@@ -46,11 +47,13 @@ export class GLTFRenderer {
         // on direct lighting.
         const roughness = clamp(col / nrColumns, 0.05, 1);
 
-        const scale = 1;
+        const scale = 500;
         const model = mat4.create();
+        const rotation = quat.create();
+        quat.rotateY(rotation, rotation, DegToRad * 180);
         mat4.fromRotationTranslationScale(
           model,
-          quat.create(),
+          rotation,
           vec3.fromValues(
             (col - nrColumns / 2) * spacing + spacing / 2,
             (row - nrRows / 2) * spacing + spacing / 2,
