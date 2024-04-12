@@ -219,13 +219,9 @@ async function main() {
   // renderFunctions.push(cubeMapReflectionRenderer.render!);
 
   const environmentCubeMap = new CubeMap();
-  // await environmentCubeMap.init(device, "symmetrical_garden_02_4k.hdr");
-  await environmentCubeMap.init(device, "newport_loft.hdr");
-  // await environmentCubeMap.init(device, "buikslotermeerplein_1k.hdr");
+  // await environmentCubeMap.init(device, "newport_loft.hdr");
+  await environmentCubeMap.init(device, "buikslotermeerplein_1k.hdr");
   // await environmentCubeMap.init(device, "thatch_chapel_2k.hdr");
-  // await environmentCubeMap.init(device, ".hdr");
-  // await environmentCubeMap.init(device, ".hdr");
-  // await environmentCubeMap.init(device, ".hdr");
 
   // const fullscreenTextureRenderer = new FullscreenTextureRenderer(
   //   device,
