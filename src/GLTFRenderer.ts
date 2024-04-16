@@ -16,6 +16,7 @@ import {
 import { multisampleCount } from "./constants";
 import { mat4, quat, vec3 } from "gl-matrix";
 import { CubeMap } from "./CubeMap/CubeMap";
+import { BRDFTexture } from "./BRDFTexture";
 
 const shaderString: string = cameraDataShaderString + pbrShaderString;
 
@@ -278,9 +279,11 @@ export class GLTFRenderer {
       entries: [{ binding: 0, resource: { buffer: cameraDataBuffer } }],
     });
 
-    let brdfLUT = await createTextureFromImage(device, "ibl_brdf_lut.png", {
-      flipY: true,
-    });
+    // let brdfLUT = await createTextureFromImage(device, "ibl_brdf_lut.png", {
+    //   flipY: true,
+    // });
+
+    let brdfLUT = new BRDFTexture(device).texture;
 
     let bindGroup1 = device.createBindGroup({
       layout: bindGroupLayoutGroup1,
