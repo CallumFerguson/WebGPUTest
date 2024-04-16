@@ -16,7 +16,7 @@ import {
 import { multisampleCount } from "./constants";
 import { mat4, quat, vec3 } from "gl-matrix";
 import { CubeMap } from "./CubeMap/CubeMap";
-import { BRDFTexture, calculateBRDFTexture } from "./calculateBRDFTexture";
+import { calculateBRDFTexture } from "./calculateBRDFTexture";
 
 const shaderString: string = cameraDataShaderString + pbrShaderString;
 

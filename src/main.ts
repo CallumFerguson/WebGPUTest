@@ -1,14 +1,8 @@
 import cameraDataShaderString from "../shaders/cameraData.wgsl?raw";
 import computeParticleShaderString from "../shaders/computeParticle.wgsl?raw";
-import fullscreenTextureShaderString from "../shaders/fullscreenTexture.wgsl?raw";
 import { mat4, vec3, vec4, quat } from "gl-matrix";
 import { clamp, getDevice } from "./utility";
-import {
-  createTextureFromImage,
-  createTextureFromImages,
-  makeShaderDataDefinitions,
-  makeStructuredView,
-} from "webgpu-utils";
+import { makeShaderDataDefinitions, makeStructuredView } from "webgpu-utils";
 import {
   fixedDeltaTime,
   largestAllowedDeltaTime,
@@ -17,8 +11,6 @@ import {
 import { SkyboxRenderer } from "./SkyboxRenderer";
 import { GLTFRenderer } from "./GLTFRenderer";
 import { CubeMap } from "./CubeMap/CubeMap";
-import { FullscreenTextureRenderer } from "./FullscreenTextureRenderer";
-import { calculateBRDFTexture } from "./calculateBRDFTexture";
 
 async function main() {
   const { gpu, device } = await getDevice();
