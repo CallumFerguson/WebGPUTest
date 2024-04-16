@@ -111,18 +111,18 @@ fn importanceSampleGGX(Xi: vec2f, N: vec3f, roughness: f32) -> vec3f{
 fn geometrySmith(N: vec3f, V: vec3f, L: vec3f, roughness: f32) -> f32 {
     let NdotV = max(dot(N, V), 0.0);
     let NdotL = max(dot(N, L), 0.0);
-    let ggx2 = geometrySchlickGGX(NdotV, roughness);
-    let ggx1 = geometrySchlickGGX(NdotL, roughness);
+    let ggx2 = geometrySchlickGGXForBRDF(NdotV, roughness);
+    let ggx1 = geometrySchlickGGXForBRDF(NdotL, roughness);
 
     return ggx1 * ggx2;
 }
 
-fn geometrySchlickGGX(NdotV: f32, roughness: f32) -> f32 {
-    let r = roughness + 1.0;
-    let k = (r * r) / 8.0;
+fn geometrySchlickGGXForBRDF(NdotV: f32, roughness: f32) -> f32 {
+  let a = roughness;
+  let k = (a * a) / 2.0;
 
-    let num = NdotV;
-    let denom = NdotV * (1.0 - k) + k;
+  let num = NdotV;
+  let denom = NdotV * (1.0 - k) + k;
 
-    return num / denom;
+  return num / denom;
 }

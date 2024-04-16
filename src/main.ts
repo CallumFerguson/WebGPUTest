@@ -18,8 +18,7 @@ import { SkyboxRenderer } from "./SkyboxRenderer";
 import { GLTFRenderer } from "./GLTFRenderer";
 import { CubeMap } from "./CubeMap/CubeMap";
 import { FullscreenTextureRenderer } from "./FullscreenTextureRenderer";
-import { BRDFTexture } from "./BRDFTexture";
-import { getBRDFConvolutionLUT } from "./getBRDFconvolution";
+import { calculateBRDFTexture } from "./calculateBRDFTexture";
 
 async function main() {
   const { gpu, device } = await getDevice();
@@ -252,22 +251,6 @@ async function main() {
     cameraDataBuffer
   );
   renderFunctions.push(skyboxRenderer.render!);
-
-  // let brdfTexture = await createTextureFromImage(device, "ibl_brdf_lut.png", {
-  //   flipY: true,
-  // });
-
-  // let brdfTexture = new BRDFTexture(device).texture;
-
-  let brdfTexture = getBRDFConvolutionLUT(device, 512);
-
-  const fullscreenTextureRenderer = new FullscreenTextureRenderer(
-    device,
-    presentationFormat,
-    brdfTexture.createView(),
-    fullscreenTextureShaderString
-  );
-  renderFunctions.push(fullscreenTextureRenderer.render);
 
   function resizeCanvasIfNeeded(): boolean {
     const width = Math.max(
