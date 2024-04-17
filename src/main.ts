@@ -363,6 +363,8 @@ async function main() {
     calculateViewProjection();
   });
 
+  const infoElem = document.getElementById("info")!;
+
   const objectModelTmp = mat4.create();
 
   let currentTime = 0;
@@ -372,6 +374,8 @@ async function main() {
   let lastRealTimeSinceStart = 0;
   let accumulatedTime = 0;
   async function render(realTimeSinceStart: number) {
+    const startTime = performance.now();
+
     realTimeSinceStart *= 0.001;
     const realDeltaTime = realTimeSinceStart - lastRealTimeSinceStart;
     const deltaTime = Math.min(realDeltaTime, largestAllowedDeltaTime);
@@ -516,6 +520,14 @@ async function main() {
     lastRealTimeSinceStart = realTimeSinceStart;
     lastMouseX = mouseX;
     lastMouseY = mouseY;
+
+    const jsTime = performance.now() - startTime;
+
+    infoElem.innerHTML = `
+    fps: ${(1 / deltaTime).toFixed(1)}<br/>
+    js:&nbsp; ${jsTime.toFixed(1)}ms
+    `;
+
     requestAnimationFrame(render);
   }
   requestAnimationFrame(render);
