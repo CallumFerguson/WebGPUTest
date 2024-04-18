@@ -13,7 +13,11 @@ export type Bounds = {
   rotation: mat4;
 };
 
-export async function getDevice(): Promise<{ gpu: GPU; device: GPUDevice }> {
+export async function getDevice(): Promise<{
+  gpu: GPU;
+  device: GPUDevice;
+  optionalFeatures: { canTimestamp: boolean };
+}> {
   const gpu = navigator.gpu;
   if (!gpu) {
     console.log("browser does not support WebGPU");
@@ -28,14 +32,28 @@ export async function getDevice(): Promise<{ gpu: GPU; device: GPUDevice }> {
     alert("browser does not support WebGPU");
     throw new Error("browser does not support WebGPU");
   }
-  const device = await adapter.requestDevice();
+
+  const requiredFeatures: GPUFeatureName[] = [];
+
+  const canTimestamp = adapter.features.has("timestamp-query");
+  if (canTimestamp) {
+    requiredFeatures.push("timestamp-query");
+  }
+
+  const device = await adapter.requestDevice({
+    requiredFeatures,
+  });
   if (!device) {
     console.log("browser does not support WebGPU");
     alert("browser does not support WebGPU");
     throw new Error("browser does not support WebGPU");
   }
 
-  return { gpu, device };
+  const optionalFeatures = {
+    canTimestamp,
+  };
+
+  return { gpu, device, optionalFeatures };
 }
 
 export function createBuffer(

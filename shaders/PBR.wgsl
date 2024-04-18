@@ -143,7 +143,7 @@ fn frag(i: VertexOutput) -> @location(0) vec4f {
     let R = reflect(-V, N);
 
     const MAX_REFLECTION_LOD = 4.0;
-    let prefilteredColor = textureSampleLevel(environmentPrefilterCubeMapTexture, textureSampler, R * vec3f(-1, 1, 1), roughness * MAX_REFLECTION_LOD).rgb;
+    var prefilteredColor = textureSampleLevel(environmentPrefilterCubeMapTexture, textureSampler, R * vec3f(-1, 1, 1), roughness * MAX_REFLECTION_LOD).rgb;
     let envBRDF = textureSample(brdfLUT, textureSampler, vec2(max(dot(N, V), 0.0), roughness)).rg;
     let specular = prefilteredColor * (F * envBRDF.x + envBRDF.y);
 
