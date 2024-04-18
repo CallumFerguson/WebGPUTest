@@ -12,9 +12,10 @@ import { SkyboxRenderer } from "./SkyboxRenderer";
 import { GLTFRenderer } from "./GLTFRenderer";
 import { CubeMap } from "./CubeMap/CubeMap";
 import { RollingAverage } from "./RollingAverage";
+import { GPUTimingHelper } from "./GPUTimingHelper";
 
 async function main() {
-  const { gpu, device, optionalFeatures } = await getDevice();
+  const { gpu, device } = await getDevice();
 
   const canvas = document.querySelector("canvas") as HTMLCanvasElement;
   if (canvas === null) {
@@ -274,25 +275,6 @@ async function main() {
     calculateViewProjection();
   }
 
-  let querySet: GPUQuerySet | undefined = undefined;
-  let resolveBuffer: GPUBuffer | undefined = undefined;
-  let resultBuffer: GPUBuffer | undefined = undefined;
-
-  if (optionalFeatures.canTimestamp) {
-    querySet = device.createQuerySet({
-      type: "timestamp",
-      count: 2,
-    });
-    resolveBuffer = device.createBuffer({
-      size: querySet.count * 8,
-      usage: GPUBufferUsage.QUERY_RESOLVE | GPUBufferUsage.COPY_SRC,
-    });
-    resultBuffer = device.createBuffer({
-      size: resolveBuffer.size,
-      usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.MAP_READ,
-    });
-  }
-
   const renderPassDescriptor: unknown = {
     colorAttachments: [
       {
@@ -306,14 +288,8 @@ async function main() {
       depthLoadOp: "clear",
       depthStoreOp: "store",
     },
-    ...(optionalFeatures.canTimestamp && {
-      timestampWrites: {
-        querySet,
-        beginningOfPassWriteIndex: 0,
-        endOfPassWriteIndex: 1,
-      },
-    }),
   };
+  const mainRenderPassTimer = new GPUTimingHelper(device, renderPassDescriptor);
 
   let depthTexture: GPUTexture;
   function createNewDepthTexture() {
@@ -394,7 +370,6 @@ async function main() {
 
   let fps = new RollingAverage();
   let jsTime = new RollingAverage();
-  let gpuTime = new RollingAverage();
 
   const objectModelTmp = mat4.create();
 
@@ -534,24 +509,7 @@ async function main() {
 
     renderPassEncoder.end();
 
-    if (optionalFeatures.canTimestamp) {
-      commandEncoder.resolveQuerySet(
-        querySet!,
-        0,
-        querySet!.count,
-        resolveBuffer!,
-        0
-      );
-      if (resultBuffer!.mapState === "unmapped") {
-        commandEncoder.copyBufferToBuffer(
-          resolveBuffer!,
-          0,
-          resultBuffer!,
-          0,
-          resultBuffer!.size
-        );
-      }
-    }
+    mainRenderPassTimer.storeTime(commandEncoder);
 
     const computePassEncoder = commandEncoder.beginComputePass();
 
@@ -567,16 +525,7 @@ async function main() {
 
     device.queue.submit([commandEncoder.finish()]);
 
-    if (
-      optionalFeatures.canTimestamp &&
-      resultBuffer!.mapState === "unmapped"
-    ) {
-      resultBuffer!.mapAsync(GPUMapMode.READ).then(() => {
-        const times = new BigInt64Array(resultBuffer!.getMappedRange());
-        gpuTime.addSample(Number(times[1] - times[0]));
-        resultBuffer!.unmap();
-      });
-    }
+    mainRenderPassTimer.recordTime();
 
     lastRealTimeSinceStart = realTimeSinceStart;
     lastMouseX = mouseX;
@@ -589,8 +538,10 @@ async function main() {
     fps: ${fps.average().toFixed(0)}
     <br/>js:&nbsp; ${jsTime.average().toFixed(2)}ms
     ${
-      gpuTime
-        ? `<br/>gpu: ${(gpuTime.average() / (1000 * 1000)).toFixed(2)}ms`
+      mainRenderPassTimer.canTimestamp()
+        ? `<br/>gpu: ${(mainRenderPassTimer.average() / (1000 * 1000)).toFixed(
+            2
+          )}ms`
         : ""
     }
     `;
