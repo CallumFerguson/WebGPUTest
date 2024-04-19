@@ -539,9 +539,7 @@ async function main() {
     <br/>js:&nbsp; ${jsTime.average().toFixed(2)}ms
     ${
       mainRenderPassTimer.canTimestamp()
-        ? `<br/>gpu: ${(mainRenderPassTimer.average() / (1000 * 1000)).toFixed(
-            2
-          )}ms`
+        ? `<br/>gpu: ${mainRenderPassTimer.averageMS().toFixed(2)}ms`
         : ""
     }
     `;

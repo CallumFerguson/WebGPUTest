@@ -7,7 +7,9 @@ export class GPUTimingHelper {
   private readonly resolveBuffer: GPUBuffer | undefined;
   private readonly resultBuffer: GPUBuffer | undefined;
 
-  private readonly gpuTime = new RollingAverage();
+  private readonly gpuTimeMS = new RollingAverage();
+
+  newResultCallback: ((gpuTimeMS: number) => void) | undefined = undefined;
 
   constructor(device: GPUDevice, renderPassDescriptor: unknown) {
     this._canTimestamp = device.features.has("timestamp-query");
@@ -68,8 +70,12 @@ export class GPUTimingHelper {
     if (this._canTimestamp && this.resultBuffer!.mapState === "unmapped") {
       this.resultBuffer!.mapAsync(GPUMapMode.READ).then(() => {
         const times = new BigInt64Array(this.resultBuffer!.getMappedRange());
-        this.gpuTime.addSample(Number(times[1] - times[0]));
+        const resultMS = Number(times[1] - times[0]) / (1000 * 1000);
+        this.gpuTimeMS.addSample(resultMS);
         this.resultBuffer!.unmap();
+        if (this.newResultCallback) {
+          this.newResultCallback(resultMS);
+        }
       });
     }
   }
@@ -78,7 +84,7 @@ export class GPUTimingHelper {
     return this._canTimestamp;
   }
 
-  average() {
-    return this.gpuTime.average();
+  averageMS() {
+    return this.gpuTimeMS.average();
   }
 }

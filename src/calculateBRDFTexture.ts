@@ -1,4 +1,5 @@
 import calculateBRDFShaderString from "../shaders/calculateBRDF.wgsl?raw";
+import { GPUTimingHelper } from "./GPUTimingHelper";
 
 export function calculateBRDFTexture(device: GPUDevice) {
   const format = "rgba16float";
@@ -49,6 +50,7 @@ export function calculateBRDFTexture(device: GPUDevice) {
       },
     ],
   };
+  const timer = new GPUTimingHelper(device, renderPassDescriptor);
 
   const commandEncoder = device.createCommandEncoder();
 
@@ -60,7 +62,15 @@ export function calculateBRDFTexture(device: GPUDevice) {
 
   renderPassEncoder.end();
 
+  timer.storeTime(commandEncoder);
+
   device.queue.submit([commandEncoder.finish()]);
+
+  timer.recordTime();
+
+  // timer.newResultCallback = (gpuTime: number) => {
+  //   console.log(`BRDF time: ${gpuTime.toFixed(2)}ms`);
+  // };
 
   return texture;
 }
