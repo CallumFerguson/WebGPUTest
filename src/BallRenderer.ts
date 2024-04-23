@@ -1,4 +1,5 @@
 import ballShaderString from "../shaders/ball.wgsl?raw";
+import cameraDataShaderString from "../shaders/cameraData.wgsl?raw";
 import { BufferBundle, createBuffer, loadModel, shuffleArray } from "./utility";
 import { multisampleCount } from "./constants";
 
@@ -20,7 +21,7 @@ export class BallRenderer {
     let bodyInfoArrayBufferView = new Float32Array(bodyInfoArrayBuffer);
 
     // const sideLength = Math.ceil(Math.cbrt(numObjects));
-    const sideLength = 5;
+    const sideLength = 10;
     const height = Math.ceil(numObjects / (sideLength * sideLength));
     const spacing = 1.5;
     const startPositions = [];
@@ -32,7 +33,7 @@ export class BallRenderer {
           }
           startPositions.push([
             x * spacing - (sideLength * spacing) / 2 + Math.random() * 0.01,
-            y * spacing + 250 + Math.random() * 0.01,
+            y * spacing + 0 + Math.random() * 0.01,
             z * spacing - (sideLength * spacing) / 2 + Math.random() * 0.01,
           ]);
         }
@@ -50,7 +51,7 @@ export class BallRenderer {
       // bodyInfoArrayBufferView[i * 12 + 4] = Math.random() - 0.5;
       // bodyInfoArrayBufferView[i * 12 + 4 + 1] = Math.random() - 0.5;
       // bodyInfoArrayBufferView[i * 12 + 4 + 2] = Math.random() - 0.5;
-      // bodyInfoArrayBufferView[i * 12 + 4 + 1] = -200;
+      bodyInfoArrayBufferView[i * 12 + 4 + 1] = -10;
 
       // color
       bodyInfoArrayBufferView[i * 12 + 8] = Math.random() * 0.8 + 0.2;
@@ -80,7 +81,7 @@ export class BallRenderer {
     // bodyInfoArrayBufferView[8 + 4 + 1] = -2;
 
     const shaderModule = device.createShaderModule({
-      code: ballShaderString,
+      code: cameraDataShaderString + ballShaderString,
     });
 
     const bindGroupLayoutGroup0 = device.createBindGroupLayout({
@@ -127,7 +128,7 @@ export class BallRenderer {
       bindGroupLayouts: [bindGroupLayoutGroup0, bindGroupLayoutGroup1],
     });
 
-    const { vertices, indices, normals } = await loadModel("tangents.glb");
+    const { vertices, indices, normals } = await loadModel("sphere.glb");
 
     const vertexBuffer = createBuffer(device, vertices, GPUBufferUsage.VERTEX);
     const normalBuffer = createBuffer(device, normals, GPUBufferUsage.VERTEX);

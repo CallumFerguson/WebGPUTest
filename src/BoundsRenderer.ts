@@ -1,4 +1,5 @@
 import boundsShaderString from "../shaders/bounds.wgsl?raw";
+import cameraDataShaderString from "../shaders/cameraData.wgsl?raw";
 import { createBuffer } from "./utility";
 import { multisampleCount } from "./constants";
 
@@ -12,7 +13,7 @@ export class BoundsRenderer {
     simulationInfoBuffer: GPUBuffer
   ) {
     const shaderModule = device.createShaderModule({
-      code: boundsShaderString,
+      code: cameraDataShaderString + boundsShaderString,
     });
 
     const bindGroupLayoutGroup0 = device.createBindGroupLayout({
