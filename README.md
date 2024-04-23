@@ -6,7 +6,7 @@
 [https://callumferguson.github.io/reaction-diffusion/github-page/reaction-diffusion/](https://callumferguson.github.io/WebGPUTest/github-page/pbr/)
 
 ### Particle Simulation
-TODO
+https://callumferguson.github.io/WebGPUTest/github-page/particles
 
 ### Physics Simulation
 TODO
