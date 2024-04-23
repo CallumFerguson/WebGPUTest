@@ -1,7 +1,5 @@
 # WebGPU Tests
 
-![screenshot](images/reaction_diffusion_update.jpg)
-
 ## Try it here
 
 ### PBR
