@@ -1,8 +1,11 @@
 import pointParticleShaderString from "../shaders/pointParticle.wgsl?raw";
+import cameraDataShaderString from "../shaders/cameraData.wgsl?raw";
+import { GPUTimingHelper } from "./GPUTimingHelper";
 
 export class ParticleRender {
   positionsBuffer: GPUBuffer;
   textureView: GPUTextureView;
+  timer: GPUTimingHelper;
 
   renderPass: (commandEncoder: GPUCommandEncoder) => void;
 
@@ -25,12 +28,12 @@ export class ParticleRender {
 
       positionsArrayBufferView[i * 4] = Math.random() * 0.1 - 0.05;
       positionsArrayBufferView[i * 4 + 1] = 0.5 + Math.random() * 0.1;
-      positionsArrayBufferView[i * 4 + 2] = -1 + Math.random() - 0.5;
+      positionsArrayBufferView[i * 4 + 2] = Math.random() - 0.5;
     }
     device.queue.writeBuffer(this.positionsBuffer, 0, positionsArrayBuffer);
 
     const shaderModule = device.createShaderModule({
-      code: pointParticleShaderString,
+      code: cameraDataShaderString + pointParticleShaderString,
     });
 
     const bindGroupLayoutGroup0 = device.createBindGroupLayout({
@@ -130,6 +133,7 @@ export class ParticleRender {
         },
       ],
     };
+    this.timer = new GPUTimingHelper(device, renderPassDescriptor);
 
     this.renderPass = (commandEncoder: GPUCommandEncoder) => {
       const renderPassEncoder = commandEncoder.beginRenderPass(
@@ -142,6 +146,8 @@ export class ParticleRender {
       renderPassEncoder.draw(numObjects);
 
       renderPassEncoder.end();
+
+      this.timer.storeTime(commandEncoder);
     };
   }
 }

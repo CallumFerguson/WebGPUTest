@@ -10,9 +10,9 @@ struct TimeData {
 @compute @workgroup_size(128) fn computeSomething(@builtin(global_invocation_id) id: vec3u) {
     let i = id.x;
 
-    velocities[i] += getGravityForce(vec3(0.05, -0.05, -1.5), id) * timeData.deltaTime;
-    velocities[i] += getGravityForce(vec3(-0.02, -0.04, -1), id) * timeData.deltaTime;
-    velocities[i] += getGravityForce(vec3(0.03, 0.01, -0.5), id) * timeData.deltaTime;
+    velocities[i] += getGravityForce(vec3(0.05, -0.05, -0.5), id) * timeData.deltaTime;
+    velocities[i] += getGravityForce(vec3(-0.02, -0.04, 0), id) * timeData.deltaTime;
+    velocities[i] += getGravityForce(vec3(0.03, 0.01, 0.5), id) * timeData.deltaTime;
 
     positions[i] += velocities[i] * timeData.deltaTime;
 }

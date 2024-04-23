@@ -1,5 +1,6 @@
 import cameraDataShaderString from "../shaders/cameraData.wgsl?raw";
 import computeParticleShaderString from "../shaders/computeParticle.wgsl?raw";
+import fullscreenParticleMapShaderString from "../shaders/fullscreenParticleMap.wgsl?raw";
 import { mat4, vec3, vec4, quat } from "gl-matrix";
 import { clamp, getDevice } from "./utility";
 import { makeShaderDataDefinitions, makeStructuredView } from "webgpu-utils";
@@ -8,14 +9,14 @@ import {
   largestAllowedDeltaTime,
   multisampleCount,
 } from "./constants";
-import { SkyboxRenderer } from "./SkyboxRenderer";
-import { GLTFRenderer } from "./GLTFRenderer";
-import { CubeMap } from "./CubeMap/CubeMap";
 import { RollingAverage } from "./RollingAverage";
 import { GPUTimingHelper } from "./GPUTimingHelper";
+import { ParticleRender } from "./ParticleRender";
+import { ParticleComputer } from "./ParticleComputer";
+import { FullscreenTextureRenderer } from "./FullscreenTextureRenderer";
 
 async function main() {
-  const { gpu, device } = await getDevice();
+  const { gpu, device, optionalFeatures } = await getDevice();
 
   const canvas = document.querySelector("canvas") as HTMLCanvasElement;
   if (canvas === null) {
@@ -60,7 +61,7 @@ async function main() {
 
   let cameraModel = mat4.create();
   let cameraRotation = quat.create();
-  let cameraPosition = vec3.fromValues(0, 0, 15);
+  let cameraPosition = vec3.fromValues(0, 0, 1.5);
 
   let view = mat4.create();
   let viewDirectionProjectionInverse = mat4.create();
@@ -147,29 +148,32 @@ async function main() {
   }
   writeCameraBuffer();
 
-  // const numObjects = 8000000; // 8000000
-  // const particleRenderer = new ParticleRender(
-  //   device,
-  //   cameraDataBuffer,
-  //   numObjects
-  // );
-  // renderPassFunctions.push(particleRenderer.renderPass);
-  //
-  // const particleComputer = new ParticleComputer(
-  //   device,
-  //   particleRenderer.positionsBuffer,
-  //   timeBuffer,
-  //   numObjects
-  // );
-  // computeFunctions.push(particleComputer.compute);
-  //
-  // const fullscreenTextureRenderer = new FullscreenTextureRenderer(
-  //   device,
-  //   presentationFormat,
-  //   particleRenderer.textureView
-  // );
-  // renderFunctions.push(fullscreenTextureRenderer.render);
+  // Particles
+  const numObjects = 8000000; // 8000000
+  const particleRenderer = new ParticleRender(
+    device,
+    cameraDataBuffer,
+    numObjects
+  );
+  renderPassFunctions.push(particleRenderer.renderPass);
 
+  const particleComputer = new ParticleComputer(
+    device,
+    particleRenderer.positionsBuffer,
+    timeBuffer,
+    numObjects
+  );
+  computeFunctions.push(particleComputer.compute);
+
+  const fullscreenTextureRenderer = new FullscreenTextureRenderer(
+    device,
+    presentationFormat,
+    particleRenderer.textureView,
+    fullscreenParticleMapShaderString
+  );
+  renderFunctions.push(fullscreenTextureRenderer.render);
+
+  // Physics
   // const rotation = mat4.create();
   // mat4.rotateZ(rotation, rotation, -((Math.PI / 180) * 45) / 2);
   // mat4.rotateX(rotation, rotation, -((Math.PI / 180) * 45) / 2);
@@ -214,37 +218,28 @@ async function main() {
   // );
   // renderFunctions.push(cubeMapReflectionRenderer.render!);
 
-  const environmentCubeMap = new CubeMap();
-  // await environmentCubeMap.init(device, "newport_loft.hdr");
-  await environmentCubeMap.init(device, "buikslotermeerplein_1k.hdr");
-  // await environmentCubeMap.init(device, "thatch_chapel_2k.hdr");
-
-  // const fullscreenTextureRenderer = new FullscreenTextureRenderer(
+  // PBR
+  // const environmentCubeMap = new CubeMap();
+  // await environmentCubeMap.init(device, "buikslotermeerplein_1k.hdr");
+  //
+  // const gltfRenderer = new GLTFRenderer();
+  // await gltfRenderer.init(
+  //   "BoomBox.glb",
   //   device,
   //   presentationFormat,
-  //   cubeMap.equirectangularTexture!.createView(),
-  //   fullscreenTextureShaderString
+  //   cameraDataBuffer,
+  //   environmentCubeMap
   // );
-  // renderFunctions.push(fullscreenTextureRenderer.render);
-
-  const gltfRenderer = new GLTFRenderer();
-  await gltfRenderer.init(
-    "BoomBox.glb",
-    device,
-    presentationFormat,
-    cameraDataBuffer,
-    environmentCubeMap
-  );
-  renderFunctions.push(gltfRenderer.render!);
-
-  const skyboxRenderer = new SkyboxRenderer();
-  await skyboxRenderer.init(
-    device,
-    presentationFormat,
-    environmentCubeMap.cubeMapTexture!,
-    cameraDataBuffer
-  );
-  renderFunctions.push(skyboxRenderer.render!);
+  // renderFunctions.push(gltfRenderer.render!);
+  //
+  // const skyboxRenderer = new SkyboxRenderer();
+  // await skyboxRenderer.init(
+  //   device,
+  //   presentationFormat,
+  //   environmentCubeMap.cubeMapTexture!,
+  //   cameraDataBuffer
+  // );
+  // renderFunctions.push(skyboxRenderer.render!);
 
   function resizeCanvasIfNeeded(): boolean {
     const width = Math.max(
@@ -290,6 +285,12 @@ async function main() {
     },
   };
   const mainRenderPassTimer = new GPUTimingHelper(device, renderPassDescriptor);
+
+  const computePassDescriptor: unknown = {};
+  const mainComputePassTimer = new GPUTimingHelper(
+    device,
+    computePassDescriptor
+  );
 
   let depthTexture: GPUTexture;
   function createNewDepthTexture() {
@@ -356,8 +357,8 @@ async function main() {
 
   document.addEventListener("wheel", (event) => {
     const sensitivity = 1.5;
-    const minDist = 0.5;
-    const maxDist = 250;
+    const minDist = 0.75;
+    const maxDist = 10;
     cameraPosition[2] = clamp(
       cameraPosition[2] * (1 + event.deltaY / (500 / sensitivity)),
       minDist,
@@ -511,7 +512,9 @@ async function main() {
 
     mainRenderPassTimer.storeTime(commandEncoder);
 
-    const computePassEncoder = commandEncoder.beginComputePass();
+    const computePassEncoder = commandEncoder.beginComputePass(
+      computePassDescriptor as GPUComputePassDescriptor
+    );
 
     computeFunctions.forEach((computeFunction) => {
       computeFunction(
@@ -523,9 +526,13 @@ async function main() {
 
     computePassEncoder.end();
 
+    mainComputePassTimer.storeTime(commandEncoder);
+
     device.queue.submit([commandEncoder.finish()]);
 
     mainRenderPassTimer.recordTime();
+    particleRenderer.timer.recordTime();
+    mainComputePassTimer.recordTime();
 
     lastRealTimeSinceStart = realTimeSinceStart;
     lastMouseX = mouseX;
@@ -538,8 +545,15 @@ async function main() {
     fps: ${fps.average().toFixed(0)}
     <br/>js:&nbsp; ${jsTime.average().toFixed(2)}ms
     ${
-      mainRenderPassTimer.canTimestamp()
-        ? `<br/>gpu: ${mainRenderPassTimer.averageMS().toFixed(2)}ms`
+      optionalFeatures.canTimestamp
+        ? `<br/>render: ${(
+            mainRenderPassTimer.averageMS() + particleRenderer.timer.averageMS()
+          ).toFixed(2)}ms`
+        : ""
+    }
+    ${
+      optionalFeatures.canTimestamp
+        ? `<br/>compute: ${mainComputePassTimer.averageMS().toFixed(2)}ms`
         : ""
     }
     `;

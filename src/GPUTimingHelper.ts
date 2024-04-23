@@ -51,6 +51,7 @@ export class GPUTimingHelper {
       this.resolveBuffer!,
       0
     );
+    ``;
     if (this.resultBuffer!.mapState === "unmapped") {
       commandEncoder.copyBufferToBuffer(
         this.resolveBuffer!,
