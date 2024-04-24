@@ -1,7 +1,7 @@
 import cameraDataShaderString from "../shaders/cameraData.wgsl?raw";
 import computeParticleShaderString from "../shaders/computeParticle.wgsl?raw";
 import { mat4, vec3, vec4, quat } from "gl-matrix";
-import { Bounds, clamp, getDevice } from "./utility";
+import { clamp, getDevice } from "./utility";
 import { makeShaderDataDefinitions, makeStructuredView } from "webgpu-utils";
 import {
   fixedDeltaTime,
@@ -10,11 +10,9 @@ import {
 } from "./constants";
 import { RollingAverage } from "./RollingAverage";
 import { GPUTimingHelper } from "./GPUTimingHelper";
-import { BoundsRenderer } from "./BoundsRenderer";
-import { BallComputer } from "./BallComputer";
-import { BallRenderer } from "./BallRenderer";
 import { SkyboxRenderer } from "./SkyboxRenderer";
 import { CubeMap } from "./CubeMap/CubeMap";
+import { GLTFRenderer } from "./GLTFRenderer";
 
 async function main() {
   const { gpu, device, optionalFeatures } = await getDevice();
@@ -62,7 +60,7 @@ async function main() {
 
   let cameraModel = mat4.create();
   let cameraRotation = quat.create();
-  let cameraPosition = vec3.fromValues(0, 0, 75);
+  let cameraPosition = vec3.fromValues(0, 0, 15);
 
   let view = mat4.create();
   let viewDirectionProjectionInverse = mat4.create();
@@ -175,55 +173,55 @@ async function main() {
   // renderFunctions.push(fullscreenTextureRenderer.render);
 
   // Physics
-  const rotation = mat4.create();
-  mat4.rotateZ(rotation, rotation, -((Math.PI / 180) * 45) / 2);
-  mat4.rotateX(rotation, rotation, -((Math.PI / 180) * 45) / 2);
-  const bounds: Bounds = {
-    size: [50, 50, 50],
-    center: [0, 0, 0],
-    rotation,
-  };
-
-  const numObjects = 64 * 20; // 50
-  const ballRenderer = new BallRenderer();
-  await ballRenderer.init(
-    device,
-    presentationFormat,
-    cameraDataBuffer,
-    numObjects
-  );
-  fixedUpdateFunctions.push(ballRenderer.fixedUpdate);
-  renderFunctions.push(ballRenderer.render);
-
-  const ballComputer = new BallComputer(
-    device,
-    ballRenderer.positionBufferBundles,
-    numObjects,
-    bounds
-  );
-  computeFunctions.push(ballComputer.compute);
-
-  const boundsRenderer = new BoundsRenderer(
-    device,
-    presentationFormat,
-    cameraDataBuffer,
-    ballComputer.simulationInfoBuffer
-  );
-  renderFunctions.push(boundsRenderer.render);
+  // const rotation = mat4.create();
+  // mat4.rotateZ(rotation, rotation, -((Math.PI / 180) * 45) / 2);
+  // mat4.rotateX(rotation, rotation, -((Math.PI / 180) * 45) / 2);
+  // const bounds: Bounds = {
+  //   size: [50, 50, 50],
+  //   center: [0, 0, 0],
+  //   rotation,
+  // };
+  //
+  // const numObjects = 64 * 20; // 50
+  // const ballRenderer = new BallRenderer();
+  // await ballRenderer.init(
+  //   device,
+  //   presentationFormat,
+  //   cameraDataBuffer,
+  //   numObjects
+  // );
+  // fixedUpdateFunctions.push(ballRenderer.fixedUpdate);
+  // renderFunctions.push(ballRenderer.render);
+  //
+  // const ballComputer = new BallComputer(
+  //   device,
+  //   ballRenderer.positionBufferBundles,
+  //   numObjects,
+  //   bounds
+  // );
+  // computeFunctions.push(ballComputer.compute);
+  //
+  // const boundsRenderer = new BoundsRenderer(
+  //   device,
+  //   presentationFormat,
+  //   cameraDataBuffer,
+  //   ballComputer.simulationInfoBuffer
+  // );
+  // renderFunctions.push(boundsRenderer.render);
 
   // PBR
   const environmentCubeMap = new CubeMap();
   await environmentCubeMap.init(device, "buikslotermeerplein_1k.hdr");
 
-  // const gltfRenderer = new GLTFRenderer();
-  // await gltfRenderer.init(
-  //   "BoomBox.glb",
-  //   device,
-  //   presentationFormat,
-  //   cameraDataBuffer,
-  //   environmentCubeMap
-  // );
-  // renderFunctions.push(gltfRenderer.render!);
+  const gltfRenderer = new GLTFRenderer();
+  await gltfRenderer.init(
+    "BoomBox.glb",
+    device,
+    presentationFormat,
+    cameraDataBuffer,
+    environmentCubeMap
+  );
+  renderFunctions.push(gltfRenderer.render!);
 
   const skyboxRenderer = new SkyboxRenderer();
   await skyboxRenderer.init(
@@ -350,8 +348,8 @@ async function main() {
 
   document.addEventListener("wheel", (event) => {
     const sensitivity = 1.5;
-    const minDist = 10;
-    const maxDist = 150;
+    const minDist = 5;
+    const maxDist = 25;
     cameraPosition[2] = clamp(
       cameraPosition[2] * (1 + event.deltaY / (500 / sensitivity)),
       minDist,
