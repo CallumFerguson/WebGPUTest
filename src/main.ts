@@ -151,9 +151,8 @@ async function main() {
 
   // CubeMap for skybox
   const environmentCubeMap = new CubeMap();
-  await environmentCubeMap.init(device, "buikslotermeerplein_1k.hdr");
-  // await environmentCubeMap.init(device, "dikhololo_night_1k.hdr");
-  // await environmentCubeMap.init(device, "lilienstein_1k.hdr");
+  // await environmentCubeMap.init(device, "buikslotermeerplein_1k.hdr");
+  await environmentCubeMap.init(device, "newport_loft.hdr");
 
   // Particles
   // const numObjects = 8000000; // 8000000
@@ -234,7 +233,7 @@ async function main() {
   await skyboxRenderer.init(
     device,
     presentationFormat,
-    environmentCubeMap.cubeMapTexture!,
+    environmentCubeMap.irradianceCubeMapTexture!,
     cameraDataBuffer
   );
   renderFunctions.push(skyboxRenderer.render!);

@@ -18,7 +18,7 @@ export class BallRenderer {
     numObjects: number,
     environmentCubeMap: CubeMap
   ) {
-    let bodyInfoArrayBuffer = new ArrayBuffer(numObjects * 16 * 3);
+    let bodyInfoArrayBuffer = new ArrayBuffer(numObjects * 16 * 4);
     let bodyInfoArrayBufferView = new Float32Array(bodyInfoArrayBuffer);
 
     // const sideLength = Math.ceil(Math.cbrt(numObjects));
@@ -44,31 +44,37 @@ export class BallRenderer {
 
     for (let i = 0; i < numObjects; i++) {
       // position
-      bodyInfoArrayBufferView[i * 12] = startPositions[i][0];
-      bodyInfoArrayBufferView[i * 12 + 1] = startPositions[i][1];
-      bodyInfoArrayBufferView[i * 12 + 2] = startPositions[i][2];
+      bodyInfoArrayBufferView[i * 16] = startPositions[i][0];
+      bodyInfoArrayBufferView[i * 16 + 1] = startPositions[i][1];
+      bodyInfoArrayBufferView[i * 16 + 2] = startPositions[i][2];
 
       // velocity
-      // bodyInfoArrayBufferView[i * 12 + 4] = Math.random() - 0.5;
-      // bodyInfoArrayBufferView[i * 12 + 4 + 1] = Math.random() - 0.5;
-      // bodyInfoArrayBufferView[i * 12 + 4 + 2] = Math.random() - 0.5;
-      bodyInfoArrayBufferView[i * 12 + 4 + 1] = -10;
+      // bodyInfoArrayBufferView[i * 16 + 4] = Math.random() - 0.5;
+      // bodyInfoArrayBufferView[i * 16 + 4 + 1] = Math.random() - 0.5;
+      // bodyInfoArrayBufferView[i * 16 + 4 + 2] = Math.random() - 0.5;
+      bodyInfoArrayBufferView[i * 16 + 4 + 1] = -10;
 
       // color
-      bodyInfoArrayBufferView[i * 12 + 8] = Math.random() * 0.8 + 0.2;
-      bodyInfoArrayBufferView[i * 12 + 8 + 1] = Math.random() * 0.8 + 0.2;
-      bodyInfoArrayBufferView[i * 12 + 8 + 2] = Math.random() * 0.8 + 0.2;
+      bodyInfoArrayBufferView[i * 16 + 8] = Math.random() * 0.8 + 0.2;
+      bodyInfoArrayBufferView[i * 16 + 8 + 1] = Math.random() * 0.8 + 0.2;
+      bodyInfoArrayBufferView[i * 16 + 8 + 2] = Math.random() * 0.8 + 0.2;
 
       // radius
       const radius = 0.5 + Math.random();
-      bodyInfoArrayBufferView[i * 12 + 3] = radius; // 0.12 for basketball sized sphere
+      bodyInfoArrayBufferView[i * 16 + 3] = radius; // 0.12 for basketball sized sphere
 
       // restitution
-      bodyInfoArrayBufferView[i * 12 + 7] = 0;
+      bodyInfoArrayBufferView[i * 16 + 7] = 0;
 
       // mass
-      bodyInfoArrayBufferView[i * 12 + 11] =
+      bodyInfoArrayBufferView[i * 16 + 11] =
         (4 / 3) * Math.PI * (radius * radius * radius); // mass is just volume
+
+      // metallic
+      bodyInfoArrayBufferView[i * 16 + 12] = Math.random();
+
+      // roughness
+      bodyInfoArrayBufferView[i * 16 + 13] = Math.random();
     }
 
     // bodyInfoArrayBufferView[0] = 0;

@@ -19,8 +19,8 @@ struct Body {
     restitution: f32,
     color: vec3f,
     mass: f32,
-//    metallic: f32,
-//    roughness: f32,
+    metallic: f32,
+    roughness: f32,
 }
 
 @group(0) @binding(0) var<uniform> cameraData: CameraData;
@@ -67,10 +67,8 @@ fn vert(i: VertexInput) -> VertexOutput {
     o.tangnet = i.tangent;
     o.bitangent = i.bitangent;
     o.normal = i.normal;
-//    o.metallic = objectData.metallic;
-//    o.roughness = objectData.roughness;
-    o.metallic = 1;
-    o.roughness = 0;
+    o.metallic = body.metallic;
+    o.roughness = body.roughness;
     o.albedo = body.color;
 
     return o;

@@ -15,6 +15,8 @@ struct Body {
     restitution: f32,
     color: vec3f,
     mass: f32,
+    metallic: f32,
+    roughness: f32,
 }
 
 @group(0) @binding(0) var<uniform> simulationInfo: SimulationInfo;
