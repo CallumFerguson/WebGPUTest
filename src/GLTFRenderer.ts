@@ -312,15 +312,19 @@ export class GLTFRenderer {
 
     this.render = (renderPassEncoder: GPURenderPassEncoder) => {
       renderPassEncoder.setPipeline(pipeline);
+
       renderPassEncoder.setBindGroup(0, bindGroup0);
       renderPassEncoder.setBindGroup(1, bindGroup1);
       renderPassEncoder.setBindGroup(2, bindGroup2);
+
       renderPassEncoder.setVertexBuffer(0, vertexBuffer);
       renderPassEncoder.setVertexBuffer(1, normalBuffer);
       renderPassEncoder.setVertexBuffer(2, uvBuffer);
       renderPassEncoder.setVertexBuffer(3, tangentBuffer);
       renderPassEncoder.setVertexBuffer(4, bitangentBuffer);
+
       renderPassEncoder.setIndexBuffer(indexBuffer, "uint32");
+
       renderPassEncoder.drawIndexed(indices.length, nrRows * nrColumns);
     };
   }

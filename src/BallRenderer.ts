@@ -1,9 +1,9 @@
-import ballShaderString from "../shaders/ball.wgsl?raw";
+import pbrBallShaderString from "../shaders/PBRBall.wgsl?raw";
 import cameraDataShaderString from "../shaders/cameraData.wgsl?raw";
 import { BufferBundle, createBuffer, loadModel, shuffleArray } from "./utility";
 import { multisampleCount } from "./constants";
-
-// const ballRadius = 0.12;
+import { CubeMap } from "./CubeMap/CubeMap";
+import { calculateBRDFTexture } from "./calculateBRDFTexture";
 
 export class BallRenderer {
   positionBufferBundles: BufferBundle[] = [];
@@ -15,7 +15,8 @@ export class BallRenderer {
     device: GPUDevice,
     presentationFormat: GPUTextureFormat,
     cameraDataBuffer: GPUBuffer,
-    numObjects: number
+    numObjects: number,
+    environmentCubeMap: CubeMap
   ) {
     let bodyInfoArrayBuffer = new ArrayBuffer(numObjects * 16 * 3);
     let bodyInfoArrayBufferView = new Float32Array(bodyInfoArrayBuffer);
@@ -81,20 +82,45 @@ export class BallRenderer {
     // bodyInfoArrayBufferView[8 + 4 + 1] = -2;
 
     const shaderModule = device.createShaderModule({
-      code: cameraDataShaderString + ballShaderString,
+      code: cameraDataShaderString + pbrBallShaderString,
     });
 
     const bindGroupLayoutGroup0 = device.createBindGroupLayout({
       entries: [
         {
           binding: 0,
-          visibility: GPUShaderStage.VERTEX,
+          visibility: GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT,
           buffer: {},
         },
       ],
     });
 
     const bindGroupLayoutGroup1 = device.createBindGroupLayout({
+      entries: [
+        {
+          binding: 0,
+          visibility: GPUShaderStage.FRAGMENT,
+          sampler: {},
+        },
+        {
+          binding: 1,
+          visibility: GPUShaderStage.FRAGMENT,
+          texture: { viewDimension: "cube" },
+        },
+        {
+          binding: 2,
+          visibility: GPUShaderStage.FRAGMENT,
+          texture: { viewDimension: "cube" },
+        },
+        {
+          binding: 3,
+          visibility: GPUShaderStage.FRAGMENT,
+          texture: {},
+        },
+      ],
+    });
+
+    const bindGroupLayoutGroup2 = device.createBindGroupLayout({
       entries: [
         {
           binding: 0,
@@ -110,7 +136,7 @@ export class BallRenderer {
         usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
       });
       const bindGroup = device.createBindGroup({
-        layout: bindGroupLayoutGroup1,
+        layout: bindGroupLayoutGroup2,
         entries: [{ binding: 0, resource: { buffer } }],
       });
       this.positionBufferBundles.push({
@@ -125,14 +151,27 @@ export class BallRenderer {
     );
 
     const pipelineLayout = device.createPipelineLayout({
-      bindGroupLayouts: [bindGroupLayoutGroup0, bindGroupLayoutGroup1],
+      bindGroupLayouts: [
+        bindGroupLayoutGroup0,
+        bindGroupLayoutGroup1,
+        bindGroupLayoutGroup2,
+      ],
     });
 
-    const { vertices, indices, normals } = await loadModel("sphere.glb");
+    const { vertices, indices, uvs, normals, tangents, bitangents } =
+      await loadModel("sphere.glb");
 
     const vertexBuffer = createBuffer(device, vertices, GPUBufferUsage.VERTEX);
-    const normalBuffer = createBuffer(device, normals, GPUBufferUsage.VERTEX);
     const indexBuffer = createBuffer(device, indices, GPUBufferUsage.INDEX);
+
+    const uvBuffer = createBuffer(device, uvs, GPUBufferUsage.VERTEX);
+    const normalBuffer = createBuffer(device, normals, GPUBufferUsage.VERTEX);
+    const tangentBuffer = createBuffer(device, tangents, GPUBufferUsage.VERTEX);
+    const bitangentBuffer = createBuffer(
+      device,
+      bitangents,
+      GPUBufferUsage.VERTEX
+    );
 
     const pipelineDescriptor: GPURenderPipelineDescriptor = {
       layout: pipelineLayout,
@@ -147,6 +186,18 @@ export class BallRenderer {
           {
             arrayStride: 3 * 4,
             attributes: [{ shaderLocation: 1, offset: 0, format: "float32x3" }],
+          },
+          {
+            arrayStride: 2 * 4,
+            attributes: [{ shaderLocation: 2, offset: 0, format: "float32x2" }],
+          },
+          {
+            arrayStride: 3 * 4,
+            attributes: [{ shaderLocation: 3, offset: 0, format: "float32x3" }],
+          },
+          {
+            arrayStride: 3 * 4,
+            attributes: [{ shaderLocation: 4, offset: 0, format: "float32x3" }],
           },
         ],
       },
@@ -174,22 +225,54 @@ export class BallRenderer {
     };
     const pipeline = device.createRenderPipeline(pipelineDescriptor);
 
+    const sampler = device.createSampler({
+      magFilter: "linear",
+      minFilter: "linear",
+      mipmapFilter: "linear",
+    });
+
     const bindGroup0 = device.createBindGroup({
       layout: bindGroupLayoutGroup0,
       entries: [{ binding: 0, resource: { buffer: cameraDataBuffer } }],
+    });
+
+    let brdfLUT = calculateBRDFTexture(device);
+
+    let bindGroup1 = device.createBindGroup({
+      layout: bindGroupLayoutGroup1,
+      entries: [
+        { binding: 0, resource: sampler },
+        {
+          binding: 1,
+          resource: environmentCubeMap.irradianceCubeMapTexture!.createView({
+            dimension: "cube",
+          }),
+        },
+        {
+          binding: 2,
+          resource: environmentCubeMap.prefilterCubeMapTexture!.createView({
+            dimension: "cube",
+          }),
+        },
+        { binding: 3, resource: brdfLUT.createView() },
+      ],
     });
 
     this.render = (renderPassEncoder: GPURenderPassEncoder) => {
       renderPassEncoder.setPipeline(pipeline);
 
       renderPassEncoder.setBindGroup(0, bindGroup0);
+      renderPassEncoder.setBindGroup(1, bindGroup1);
       renderPassEncoder.setBindGroup(
-        1,
+        2,
         this.positionBufferBundles[0].bindGroups[0]
       );
 
       renderPassEncoder.setVertexBuffer(0, vertexBuffer);
       renderPassEncoder.setVertexBuffer(1, normalBuffer);
+      renderPassEncoder.setVertexBuffer(2, uvBuffer);
+      renderPassEncoder.setVertexBuffer(3, tangentBuffer);
+      renderPassEncoder.setVertexBuffer(4, bitangentBuffer);
 
       renderPassEncoder.setIndexBuffer(indexBuffer, "uint32");
 
